@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scripture Card Generator — The Church of Dingan</title>
+<meta name="description" content="Generate beautiful 1080×1080 shareable scripture cards from the Dinganomicon. Choose a verse, pick a background, download as PNG."/>
+<meta name="theme-color" content="#C8963E"/>
+
+<!-- ── SECURITY HEADERS ── -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' data: https://cdn.jsdelivr.net; img-src 'self' data: blob:; form-action 'none'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()"/>
+<meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23050E0E'/%3E%3Ccircle cx='50' cy='50' r='44' fill='none' stroke='%23C8963E' stroke-width='3'/%3E%3Ccircle cx='50' cy='50' r='34' fill='%23050E0E' stroke='%23C8963E' stroke-width='1'/%3E%3Cpolygon points='50,22 54,34 67,34 57,42 61,54 50,46 39,54 43,42 33,34 46,34' fill='%23D4A820'/%3E%3C/svg%3E"/>
+
+<style>
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/cinzel-decorative@5.0.18/index.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/eb-garamond@5.0.26/index.css');
+
+:root{
+  --bg-deep:#050E0E;--bg-dark:#091616;--bg-mid:#0D2020;--bg-section:#0A1A1A;
+  --gold:#C8963E;--gold-light:#E8C878;--gold-bright:#FFD060;
+  --crimson:#5A1010;--crimson-b:#A01010;
+  --text-gold:#D4A820;--text-light:#E8C878;
+  --text-dim:#8A7040;--text-body:#C8B888;--border:rgba(200,150,62,0.3);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg-deep);
+  color:var(--text-body);
+  font-family:'EB Garamond',Palatino,Georgia,serif;
+  font-size:17px;line-height:1.7;
+  min-height:100vh;
+  padding:40px 24px;
+  overflow-x:hidden;
+}
+
+.wrap{max-width:1180px;margin:0 auto}
+
+header{text-align:center;margin-bottom:48px}
+.back{
+  display:inline-block;
+  font-family:'Cinzel Decorative',Palatino,serif;
+  font-size:11px;letter-spacing:3px;
+  color:var(--text-dim);
+  text-decoration:none;
+  margin-bottom:32px;
+  transition:color .3s;
+  text-transform:uppercase;
+}
+.back:hover{color:var(--gold)}
+.hero-symbol{width:80px;height:80px;margin:0 auto 20px;display:block}
+h1{
+  font-family:'Cinzel Decorative',Palatino,serif;
+  font-size:clamp(22px,3.5vw,38px);
+  color:var(--gold-light);
+  letter-spacing:3px;
+  margin-bottom:14px;
+}
+.sub{font-style:italic;color:var(--text-dim);font-size:16px;max-width:540px;margin:0 auto}
+.ornament{color:var(--gold);letter-spacing:10px;margin:18px 0;font-size:11px}
+
+.studio{
+  display:grid;
+  grid-template-columns:380px 1fr;
+  gap:40px;
+  align-items:start;
+}
+
+/* ── CONTROLS PANEL ── */
+.controls{
+  background:var(--bg-section);
+  border:1px solid var(--border);
+  padding:36px 28px;
+  position:relative;
+}
+.controls::before{
+  content:'';position:absolute;inset:6px;
+  border:1px solid rgba(200,150,62,0.15);
+  pointer-events:none;
+}
+.controls-title{
+  font-family:'Cinzel Decorative',Palatino,serif;
+  font-size:11px;letter-spacing:4px;
+  color:var(--gold);text-transform:uppercase;
+  text-align:center;margin-bottom:28px;
+  padding-bottom:18px;
+  border-bottom:1px solid var(--border);
+}
+.field{margin-bottom:28px;position:relative;z-index:1}
+.label{
+  display:block;
+  font-family:'Cinzel Decorative',Palatino,serif;
+  font-size:10px;letter-spacing:3px;
+  color:var(--text-dim);
+  text-transform:uppercase;
+  margin-bottom:12px;
+}
+select{
+  width:100%;
+  background:var(--bg-deep);
+  border:1px solid var(--border);
+  color:var(--text-light);
+  padding:14px 16px;font-size:14px;
+  font-family:'EB Garamond',Palatino,Georgia,serif;
+  outline:none;cursor:pointer;
+  transition:border-color .3s;
+  appearance:none;
+  -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23C8963E' d='M8 11 L3 5 L13 5 Z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+  background-size:14px;
+  padding-right:40px;
+}
+select:focus,select:hover{border-color:var(--gold)}
+select option{background:var(--bg-deep);color:var(--text-light);padding:8px}
+
+.swatches{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.swatch{
+  aspect-ratio:1;
+  border:1px solid var(--border);
+  cursor:pointer;
+  position:relative;
+  transition:border-color .3s,transform .2s,box-shadow .3s;
+  display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:8px;
+}
+.swatch:hover{transform:translateY(-2px)}
+.swatch.active{
+  border-color:var(--gold-bright);
+  box-shadow:0 0 18px rgba(200,150,62,0.35);
+}
+.swatch.active::after{
+  content:'◆';
+  position:absolute;top:6px;right:8px;
+  color:var(--gold-bright);font-size:10px;
+}
+.swatch.teal{background:linear-gradient(135deg,#050E0E,#0D2020)}
+.swatch.crimson{background:linear-gradient(135deg,#1A0606,#3A0A0A)}
+.swatch.gold{background:linear-gradient(135deg,#1F1608,#2A1F0A)}
+.swatch-label{
+  font-family:'Cinzel Decorative',Palatino,serif;
+  font-size:9px;letter-spacing:2px;
+  color:var(--gold-light);
+  text-transform:uppercase;
+}
+
+.btn{
+  display:block;width:100%;
+  font-family:'Cinzel Decorative',Palatino,serif;
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  padding:18px 24px;
+  border:1px solid var(--gold);
+  background:var(--gold);color:var(--bg-deep);
+  cursor:pointer;transition:all .3s;
+  text-decoration:none;text-align:center;
+  font-weight:400;
+}
+.btn:hover:not(:disabled){background:transparent;color:var(--gold)}
+.btn.ghost{background:transparent;color:var(--gold);margin-top:12px}
+.btn.ghost:hover:not(:disabled){background:var(--gold);color:var(--bg-deep)}
+.btn:disabled{opacity:0.35;cursor:not-allowed}
+
+/* ── STAGE / PREVIEW ── */
+.stage{
+  display:flex;flex-direction:column;align-items:center;
+  background:var(--bg-section);
+  border:1px solid var(--border);
+  padding:36px;
+  position:relative;
+}
+.stage::before{
+  content:'';position:absolute;inset:6px;
+  border:1px solid rgba(200,150,62,0.15);
+  pointer-events:none;
+}
+.stage-title{
+  font-family:'Cinzel Decorative',Palatino,serif;
+  font-size:11px;letter-spacing:4px;
+  color:var(--gold);text-transform:uppercase;
+  text-align:center;margin-bottom:24px;
+  padding-bottom:18px;
+  border-bottom:1px solid var(--border);
+  width:100%;
+}
+.canvas-wrap{
+  width:100%;max-width:560px;
+  aspect-ratio:1/1;
+  border:1px solid var(--border);
+  background:var(--bg-deep);
+  position:relative;
+  overflow:hidden;
+}
+#preview{
+  width:100%;height:100%;
+  display:block;
+}
+.stage-help{
+  margin-top:24px;
+  font-size:13px;color:var(--text-dim);
+  font-style:italic;text-align:center;
+  letter-spacing:1px;
+}
+.stage-help b{color:var(--gold-light);font-style:normal;letter-spacing:2px}
+
+footer{
+  text-align:center;
+  margin-top:64px;
+  padding-top:32px;
+  border-top:1px solid var(--border);
+  font-size:12px;color:var(--text-dim);
+  letter-spacing:2px;
+}
+footer a{color:var(--gold);text-decoration:none}
+footer a:hover{color:var(--gold-bright)}
+
+@media(max-width:880px){
+  .studio{grid-template-columns:1fr;gap:24px}
+  body{padding:24px 16px}
+}
+@media(max-width:480px){
+  .swatch-label{font-size:8px;letter-spacing:1px}
+  .controls,.stage{padding:24px 18px}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <a href="index.html" class="back">← Return to the Church</a>
+    <svg class="hero-symbol" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="92" fill="none" stroke="#C8963E" stroke-width="2.5"/>
+      <circle cx="100" cy="100" r="65" fill="#050E0E" stroke="#C8963E" stroke-width="1.5"/>
+      <polygon points="100,42 104.8,57.5 121,57.5 108.1,66.8 113,82.3 100,73 87,82.3 91.9,66.8 79,57.5 95.2,57.5" fill="#D4A820" stroke="#C8963E" stroke-width="0.8"/>
+      <circle cx="100" cy="100" r="10" fill="#C8963E"/>
+    </svg>
+    <h1>SCRIPTURE CARD GENERATOR</h1>
+    <p class="ornament">◆ &nbsp; ◆ &nbsp; ◆</p>
+    <p class="sub">Render any verse of the Dinganomicon as a sacred 1080×1080 card. Suitable for sharing, contemplation, or quiet rebellion.</p>
+  </header>
+
+  <div class="studio">
+
+    <div class="controls">
+      <p class="controls-title">◆ The Atelier ◆</p>
+
+      <div class="field">
+        <label class="label" for="verse">Select a Verse</label>
+        <select id="verse"></select>
+      </div>
+
+      <div class="field">
+        <span class="label">Sacred Background</span>
+        <div class="swatches">
+          <div class="swatch teal active" data-bg="teal" role="button" tabindex="0" aria-label="Dark Teal">
+            <span class="swatch-label">Teal</span>
+          </div>
+          <div class="swatch crimson" data-bg="crimson" role="button" tabindex="0" aria-label="Dark Crimson">
+            <span class="swatch-label">Crimson</span>
+          </div>
+          <div class="swatch gold" data-bg="gold" role="button" tabindex="0" aria-label="Dark Gold">
+            <span class="swatch-label">Gold</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn" id="generate" type="button">Generate Card</button>
+      <button class="btn ghost" id="download" type="button" disabled>Download PNG</button>
+    </div>
+
+    <div class="stage">
+      <p class="stage-title">◆ Preview ◆</p>
+      <div class="canvas-wrap">
+        <canvas id="preview" width="1080" height="1080"></canvas>
+      </div>
+      <p class="stage-help">Rendered at <b>1080 × 1080</b> · Square format · Ready for any platform</p>
+    </div>
+
+  </div>
+
+  <footer>
+    THE CHURCH OF DINGAN &nbsp; · &nbsp; <a href="index.html">Return Home</a>
+  </footer>
+</div>
+
+<script>
+'use strict';
+
+// ── DATA: 8 verses from the Dinganomicon (matches index.html) ──
+const VERSES = [
+  {citation:"Squeakesis 1:1–3", text:"In the beginning there was nothing. Nothing was peaceful. Nothing asked no questions. Nothing required no explanations. Nothing was, in retrospect, quite pleasant. Then Dingan arrived."},
+  {citation:"The Book of Questions 1:9–12", text:"If your religion is the true one, how did you determine that? And why does your method of determination always lead back to the religion you were born into? These are good questions. Ask them of every religion. Ask them of Dinganism too."},
+  {citation:"Ratticus 1:1", text:"Do not harm others. This is the entire law. Everything else is commentary."},
+  {citation:"The Book of Ratses 3:1–5", text:"You are allowed to be angry. You are allowed to grieve without it being a failure of faith. You are allowed to say I don't know without it being a sin. The gods that demand you perform peace while in pain are not asking for faith. They are asking for performance."},
+  {citation:"Proverbs of the Cape, XIII", text:"The rat in the cape flies not because the cape grants flight but because the rat decided to fly. The cape is just what he chose to wear while doing it."},
+  {citation:"The Ratvelations 1:11", text:"Be kind. Think clearly. Help each other. Stop waiting for a god to do the things only you can do."},
+  {citation:"Psalm V — The Psalm of Anger", text:"Be angry. The anger you feel at cruelty is not a failure of spirit. It is the spirit working correctly. Anger that becomes action is more sacred than peace that becomes compliance. The gods who demand calm in the face of injustice are not asking for grace. They are asking for silence. Refuse them. Squeak instead."},
+  {citation:"Psalm VI — At Three in the Morning", text:"At three in the morning the room is too quiet and the thoughts are too loud and you are certain you are the only one awake with this particular grief. You are not. Dingan says: you are not the first to feel this, and you will not be the last. Statistics are more reliable than miracles. Somewhere a stranger is awake with the same ache, in the same hour, under a different ceiling. This is not poetry. This is arithmetic. You are not alone. You are merely scattered."},
+  {citation:"The Ratvelations 1:9", text:"Hope is what humans do when they do not have information. It is neither realistic nor useless. It is the energy that makes action possible when certainty is unavailable."},
+  {citation:"Proverbs of the Cape, XII", text:"Your morality came before your religion. You use your morality to decide which parts of the holy book to follow. You already know what is right. You did not need the book for that. (Dingan notes that you are currently reading a book. Dingan does not resolve this contradiction. It is yours to sit with.)"},
+  {citation:"The Book of Questions 1:13", text:"Does Dinganism tell you what to think? Read it again carefully. Ask that question of every page. If you find a place where this book states a conclusion rather than showing you where to look, that is the part to distrust. Including this verse."},
+  {citation:"Proverbs of the Cape, VIII", text:"If you need the threat of hell to be a good person, you are not a good person. You are a person afraid of consequences. These are different things. (Dingan pauses here. Dingan wonders if stating this so confidently makes Dingan exactly the kind of authority he has spent this book criticising. Dingan decides he does not care. This may be the problem.)"}
+];
+
+// ── BACKGROUND PALETTES ──
+const BACKGROUNDS = {
+  teal:    {c1:'#050E0E', c2:'#0D2020', glow:'rgba(200,150,62,0.10)', accent:'#C8963E'},
+  crimson: {c1:'#180404', c2:'#3A0A0A', glow:'rgba(220,130,80,0.10)', accent:'#D8A848'},
+  gold:    {c1:'#1F1608', c2:'#2A1F0A', glow:'rgba(255,200,100,0.14)', accent:'#E8C878'}
+};
+
+// ── ELEMENTS ──
+const select = document.getElementById('verse');
+const swatches = document.querySelectorAll('.swatch');
+const generateBtn = document.getElementById('generate');
+const downloadBtn = document.getElementById('download');
+const canvas = document.getElementById('preview');
+const ctx = canvas.getContext('2d');
+
+let currentBg = 'teal';
+let hasRendered = false;
+
+// ── POPULATE DROPDOWN ──
+VERSES.forEach((v, i) => {
+  const opt = document.createElement('option');
+  opt.value = i;
+  const preview = v.text.length > 56 ? v.text.slice(0, 56).trim() + '…' : v.text;
+  opt.textContent = v.citation + ' — "' + preview + '"';
+  select.appendChild(opt);
+});
+
+// ── SWATCH SELECTION ──
+swatches.forEach(sw => {
+  function activate(){
+    swatches.forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    currentBg = sw.dataset.bg;
+  }
+  sw.addEventListener('click', activate);
+  sw.addEventListener('keydown', e => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); activate(); }
+  });
+});
+
+// ── DRAWING HELPERS ──
+function drawSquakle(cx, cy, size) {
+  const scale = size / 200;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+
+  // Outer thick circle
+  ctx.strokeStyle = '#C8963E';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, 92, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Inner thin circle (decorative)
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.arc(0, 0, 83, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 16 tick marks around the perimeter
+  ctx.globalAlpha = 0.65;
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 16; i++) {
+    const angle = (i * 22.5) * Math.PI / 180 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * 90, Math.sin(angle) * 90);
+    ctx.lineTo(Math.cos(angle) * 76, Math.sin(angle) * 76);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Inner background disc
+  ctx.fillStyle = '#050E0E';
+  ctx.beginPath();
+  ctx.arc(0, 0, 65, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#C8963E';
+  ctx.stroke();
+
+  // 5-point star (translated so center is at 0,0; original was 100,100)
+  const star = [
+    [0,-58],[4.8,-42.5],[21,-42.5],[8.1,-33.2],[13,-17.7],
+    [0,-27],[-13,-17.7],[-8.1,-33.2],[-21,-42.5],[-4.8,-42.5]
+  ];
+  ctx.fillStyle = '#D4A820';
+  ctx.strokeStyle = '#C8963E';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(star[0][0], star[0][1]);
+  for (let i = 1; i < star.length; i++) ctx.lineTo(star[i][0], star[i][1]);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Central dot
+  ctx.fillStyle = '#C8963E';
+  ctx.beginPath();
+  ctx.arc(0, 0, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 4 cardinal dots on outer perimeter
+  ctx.fillStyle = '#D4A820';
+  [[0,-92],[0,92],[-92,0],[92,0]].forEach(([x,y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+function wrapText(text, maxWidth, font) {
+  ctx.font = font;
+  const words = text.split(/\s+/);
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawDivider(cx, cy, width) {
+  ctx.strokeStyle = 'rgba(200,150,62,0.75)';
+  ctx.lineWidth = 1;
+  const gap = 28;
+  ctx.beginPath();
+  ctx.moveTo(cx - width/2, cy);
+  ctx.lineTo(cx - gap, cy);
+  ctx.moveTo(cx + gap, cy);
+  ctx.lineTo(cx + width/2, cy);
+  ctx.stroke();
+  // Diamond marker
+  ctx.fillStyle = '#C8963E';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 6);
+  ctx.lineTo(cx + 6, cy);
+  ctx.lineTo(cx, cy + 6);
+  ctx.lineTo(cx - 6, cy);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function setLetterSpacing(px){
+  // Modern canvas API. Silently ignored on older browsers — graceful fallback.
+  try { ctx.letterSpacing = px + 'px'; } catch(e) {}
+}
+
+// ── PLACEHOLDER (before first render) ──
+function drawPlaceholder() {
+  ctx.fillStyle = '#050E0E';
+  ctx.fillRect(0, 0, 1080, 1080);
+
+  // Subtle frame
+  ctx.strokeStyle = 'rgba(200,150,62,0.18)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(60, 60, 960, 960);
+
+  // Ghost symbol
+  ctx.globalAlpha = 0.18;
+  drawSquakle(540, 460, 240);
+  ctx.globalAlpha = 1;
+
+  // Help text
+  ctx.fillStyle = '#8A7040';
+  ctx.font = "italic 30px 'EB Garamond', Palatino, serif";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  setLetterSpacing(0);
+  ctx.fillText('Select a verse, choose a background,', 540, 700);
+  ctx.fillText('and click Generate.', 540, 745);
+
+  ctx.fillStyle = '#C8963E';
+  setLetterSpacing(4);
+  ctx.font = "16px 'Cinzel Decorative', Palatino, serif";
+  ctx.fillText('THE ATELIER AWAITS', 540, 820);
+  setLetterSpacing(0);
+}
+
+// ── MAIN RENDER ──
+function render() {
+  const verse = VERSES[parseInt(select.value, 10) || 0];
+  const bg = BACKGROUNDS[currentBg];
+
+  // 1. Background gradient (diagonal)
+  const grad = ctx.createLinearGradient(0, 0, 1080, 1080);
+  grad.addColorStop(0, bg.c1);
+  grad.addColorStop(1, bg.c2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 1080, 1080);
+
+  // 2. Soft radial gold glow at center
+  const glow = ctx.createRadialGradient(540, 540, 100, 540, 540, 720);
+  glow.addColorStop(0, bg.glow);
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 1080, 1080);
+
+  // 3. Outer vignette
+  const vig = ctx.createRadialGradient(540, 540, 320, 540, 540, 780);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, 1080, 1080);
+
+  // 4. Decorative double border frame
+  ctx.strokeStyle = '#C8963E';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(50, 50, 980, 980);
+  ctx.lineWidth = 0.6;
+  ctx.strokeStyle = 'rgba(200,150,62,0.45)';
+  ctx.strokeRect(64, 64, 952, 952);
+
+  // 5. Corner diamond ornaments
+  ctx.fillStyle = '#C8963E';
+  const cornerSize = 8;
+  [[80,80],[1000,80],[80,1000],[1000,1000]].forEach(([x,y]) => {
+    ctx.beginPath();
+    ctx.moveTo(x, y - cornerSize);
+    ctx.lineTo(x + cornerSize, y);
+    ctx.lineTo(x, y + cornerSize);
+    ctx.lineTo(x - cornerSize, y);
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  // 6. Sacred Squeakle (top, scaled)
+  drawSquakle(540, 220, 240);
+
+  // 7. Top divider line with diamond
+  drawDivider(540, 380, 380);
+
+  // 8. VERSE TEXT — auto-size based on length
+  const text = verse.text;
+  let fontSize, lineHeight;
+  if (text.length < 100)       { fontSize = 44; lineHeight = 64; }
+  else if (text.length < 200)  { fontSize = 36; lineHeight = 54; }
+  else if (text.length < 320)  { fontSize = 30; lineHeight = 46; }
+  else if (text.length < 450)  { fontSize = 26; lineHeight = 40; }
+  else                          { fontSize = 24; lineHeight = 36; }
+
+  const verseFont = "italic " + fontSize + "px 'EB Garamond', Palatino, Georgia, serif";
+  const lines = wrapText('"' + text + '"', 820, verseFont);
+
+  ctx.font = verseFont;
+  ctx.fillStyle = '#E8C878';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  setLetterSpacing(0);
+
+  const textBlockHeight = lines.length * lineHeight;
+  // Center between top divider (y=380) and bottom divider (y=900)
+  const availableTop = 410;
+  const availableBottom = 880;
+  const availableHeight = availableBottom - availableTop;
+  let textY = availableTop + Math.max(0, (availableHeight - textBlockHeight) / 2);
+
+  for (const line of lines) {
+    ctx.fillText(line, 540, textY);
+    textY += lineHeight;
+  }
+
+  // 9. Bottom divider
+  drawDivider(540, 900, 380);
+
+  // 10. CITATION (Roman, spaced, gold)
+  ctx.fillStyle = '#C8963E';
+  ctx.textBaseline = 'top';
+  ctx.font = "16px 'Cinzel Decorative', Palatino, serif";
+  setLetterSpacing(4);
+  ctx.fillText(verse.citation.toUpperCase(), 540, 922);
+
+  // 11. BRANDING
+  ctx.fillStyle = '#E8C878';
+  ctx.font = "bold 22px 'Cinzel Decorative', Palatino, serif";
+  setLetterSpacing(6);
+  ctx.fillText('THE CHURCH OF DINGAN', 540, 962);
+
+  // 12. Subtitle / motto
+  ctx.fillStyle = '#8A7040';
+  ctx.font = "italic 14px 'EB Garamond', Palatino, serif";
+  setLetterSpacing(2);
+  ctx.fillText('Think  ·  Squeak  ·  Doubt', 540, 1002);
+  setLetterSpacing(0);
+
+  hasRendered = true;
+  downloadBtn.disabled = false;
+}
+
+// ── EVENT WIRING ──
+generateBtn.addEventListener('click', () => {
+  render();
+});
+
+downloadBtn.addEventListener('click', () => {
+  if (!hasRendered) return;
+  const verse = VERSES[parseInt(select.value, 10) || 0];
+  const slug = verse.citation
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const link = document.createElement('a');
+  link.download = 'dinganomicon-' + slug + '.png';
+  link.href = canvas.toDataURL('image/png');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+});
+
+// Re-render automatically if a verse or background is changed AFTER first render
+select.addEventListener('change', () => { if (hasRendered) render(); });
+swatches.forEach(sw => sw.addEventListener('click', () => { if (hasRendered) render(); }));
+
+// ── INIT ──
+async function init() {
+  try {
+    await document.fonts.ready;
+    await Promise.all([
+      document.fonts.load("italic 36px 'EB Garamond'"),
+      document.fonts.load("italic 26px 'EB Garamond'"),
+      document.fonts.load("16px 'Cinzel Decorative'"),
+      document.fonts.load("bold 22px 'Cinzel Decorative'")
+    ]);
+  } catch (e) { /* proceed with fallback fonts */ }
+  drawPlaceholder();
+}
+init();
+</script>
+</body>
+</html>
