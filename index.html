@@ -1468,6 +1468,10 @@ setTimeout(()=>certActions.classList.add('visible'),200);
 // Send confirmation email in background
 const emailStatusEl=document.getElementById('cert-email-status');
 if(APPS_SCRIPT_URL){
+if(result.isReturning){
+emailStatusEl.textContent='✦ Your sacred confirmation was already sent to '+email+' previously. Your Sacred ID is unchanged.';
+emailStatusEl.classList.add('visible');
+}else{
 emailStatusEl.textContent='Sending sacred confirmation to '+email+'...';
 emailStatusEl.classList.add('visible');
 sendDinganiteEmail(name,email,dinganiteId,result.isReturning).then(r=>{
@@ -1477,6 +1481,7 @@ emailStatusEl.textContent='✦ Confirmation sent to '+email+'. Check your inbox 
 emailStatusEl.textContent='Email could not be sent. Your Sacred ID is recorded locally.';
 }
 });
+}
 }
 });
 document.getElementById('cert-download').addEventListener('click',async function(){
