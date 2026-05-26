@@ -1082,7 +1082,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   </svg>
 </button>
 
-<button id="sound-toggle" type="button" aria-label="Toggle ambient organ drone" aria-pressed="false" title="Ambient sound">
+<button id="sound-toggle" class="playing" type="button" aria-label="Toggle ambient organ drone" aria-pressed="true" title="Ambient sound">
   <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="currentColor"/>
     <line x1="22" y1="9" x2="16" y2="15"/>
@@ -1103,7 +1103,7 @@ const AC=window.AudioContext||window.webkitAudioContext;
 if(!AC){btn.style.display='none';return}
 let ctx=null,master=null,tremolo=null,filter=null,lfo=null,lfoGain=null;
 let voices=[];
-let playing=false;
+let playing=true;
 const TARGET_VOLUME=0.08;
 const NOTES=[
 {freq:65.41,  type:'sawtooth', gain:0.34, detune:0},   // C2  fundamental
@@ -1183,8 +1183,10 @@ master.gain.cancelScheduledValues(now);
 master.gain.linearRampToValueAtTime(TARGET_VOLUME,now+0.6);
 }
 });
-/* Auto-start ambient drone once sneeze intro has cleared */
-setTimeout(()=>{ if(!playing) play(); },5200);
+/* Start immediately; retry on first user interaction if browser blocked autoplay */
+play();
+document.addEventListener('click',function _ua(){if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});document.removeEventListener('click',_ua);},{once:true});
+document.addEventListener('touchstart',function _ut(){if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});document.removeEventListener('touchstart',_ut);},{once:true});
 })();
 (function(){
 const pb=document.getElementById('progress-bar');
