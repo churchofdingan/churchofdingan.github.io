@@ -249,6 +249,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 </style>
 <style>
 #sneeze-intro{position:fixed;inset:0;z-index:10000;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:opacity 0.9s ease;}
+#enter-gate{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);z-index:10001;font-family:'Cinzel Decorative',Palatino,serif;font-size:11px;letter-spacing:6px;color:rgba(200,150,62,0.9);text-transform:uppercase;cursor:pointer;white-space:nowrap;text-shadow:0 0 20px rgba(200,150,62,0.5);animation:gatebeat 1.5s ease-in-out infinite;user-select:none;-webkit-user-select:none;pointer-events:auto;}
+@keyframes gatebeat{0%,100%{opacity:0.45}50%{opacity:1}}
 #sneeze-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 #sneeze-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;}
 #sneeze-p1{font-family:'Cinzel Decorative',Palatino,serif;font-size:clamp(12px,2.2vw,26px);letter-spacing:10px;color:#C8963E;opacity:0;text-align:center;text-transform:uppercase;position:relative;z-index:1;transition:opacity 0.4s ease;}
@@ -306,8 +308,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
     <circle cx="192" cy="100" r="5" fill="#D4A820"/>
   </svg>
   <p class="loading-text">THE CHURCH OF DINGAN</p>
-  <p class="loading-enter" id="loading-enter">◆ &nbsp; CLICK TO ENTER &nbsp; ◆</p>
 </div>
+<div id="enter-gate">◆ &nbsp; CLICK ANYWHERE TO ENTER &nbsp; ◆</div>
 
 <!-- ── NAV ── -->
 <nav id="main-nav">
@@ -1308,6 +1310,17 @@ if(aura&&heroEl&&window.matchMedia('(hover:hover)').matches){
 }
 })();
 (function(){
+(function(){
+var gate=document.getElementById('enter-gate');
+if(!gate)return;
+function _removeGate(){gate.style.opacity='0';gate.style.transition='opacity 0.5s ease';gate.style.pointerEvents='none';setTimeout(function(){if(gate.parentNode)gate.parentNode.removeChild(gate);},500);}
+var _gt=setTimeout(_removeGate,4700); /* auto-remove once loading screen is gone */
+document.addEventListener('click',function _gc(){
+document.removeEventListener('click',_gc);
+clearTimeout(_gt);
+_removeGate();
+},{once:true,passive:true});
+})();
 const loader=document.getElementById('loading-screen');
 if(loader){
 document.body.style.overflow='hidden';
