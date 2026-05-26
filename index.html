@@ -1146,55 +1146,69 @@ osc.start();
 return {osc,gain:g};
 });
 }
-function play(){
-if(!ctx)build();
-playing=true;
-btn.classList.add('playing');
-btn.setAttribute('aria-pressed','true');
+var _scPending=false; /* guard: only one statechange listener at a time */
 function _ramp(){
+/* Only ramp up if user still wants sound on */
+if(!playing)return;
 var now=ctx.currentTime;
 master.gain.cancelScheduledValues(now);
 master.gain.setValueAtTime(master.gain.value,now);
 master.gain.linearRampToValueAtTime(TARGET_VOLUME,now+1.8);
 }
-if(ctx.state==='running'){_ramp();}
-else{
+function _tryResume(){
+if(!ctx||ctx.state==='running')return;
+if(_scPending)return; /* listener already waiting */
+_scPending=true;
 ctx.resume();
-ctx.addEventListener('statechange',function _sc(){
-if(ctx.state==='running'){ctx.removeEventListener('statechange',_sc);_ramp();}
+ctx.addEventListener('statechange',function _scl(){
+if(ctx.state==='running'){
+ctx.removeEventListener('statechange',_scl);
+_scPending=false;
+_ramp(); /* guarded — only plays if playing===true */
+}
 });
 }
+function play(){
+if(!ctx)build();
+playing=true;
+btn.classList.add('playing');
+btn.setAttribute('aria-pressed','true');
+if(ctx.state==='running'){_ramp();}
+else{_tryResume();}
 }
 function stop(){
 if(!ctx)return;
-const now=ctx.currentTime;
-master.gain.cancelScheduledValues(now);
-master.gain.setValueAtTime(master.gain.value,now);
-master.gain.linearRampToValueAtTime(0,now+0.9);
 playing=false;
 btn.classList.remove('playing');
 btn.setAttribute('aria-pressed','false');
+var now=ctx.currentTime;
+master.gain.cancelScheduledValues(now);
+master.gain.setValueAtTime(master.gain.value,now);
+master.gain.linearRampToValueAtTime(0,now+0.6);
 }
-btn.addEventListener('click',()=>{
+btn.addEventListener('click',function(){
 if(playing)stop();
 else play();
 });
-document.addEventListener('visibilitychange',()=>{
+document.addEventListener('visibilitychange',function(){
 if(!ctx)return;
-if(document.hidden && playing){
-const now=ctx.currentTime;
+if(document.hidden&&playing){
+var now=ctx.currentTime;
 master.gain.cancelScheduledValues(now);
 master.gain.linearRampToValueAtTime(0,now+0.4);
-} else if(!document.hidden && playing){
-const now=ctx.currentTime;
+}else if(!document.hidden&&playing){
+var now=ctx.currentTime;
 master.gain.cancelScheduledValues(now);
 master.gain.linearRampToValueAtTime(TARGET_VOLUME,now+0.6);
 }
 });
-/* Start immediately; statechange listener fires ramp when context unblocks */
+/* Auto-start: call play(), then unlock AudioContext on first user interaction */
 play();
 ['click','scroll','keydown','touchstart'].forEach(function(ev){
-document.addEventListener(ev,function(){if(ctx&&ctx.state==='suspended')ctx.resume();},{once:true,passive:true});
+document.addEventListener(ev,function _ul(){
+if(ctx&&ctx.state==='suspended')ctx.resume();
+document.removeEventListener(ev,_ul);
+},{passive:true});
 });
 })();
 (function(){
