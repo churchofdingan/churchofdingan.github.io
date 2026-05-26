@@ -1146,16 +1146,24 @@ osc.start();
 return {osc,gain:g};
 });
 }
-async function play(){
+function play(){
 if(!ctx)build();
-try{if(ctx.state==='suspended')await ctx.resume()}catch(e){}
-const now=ctx.currentTime;
-master.gain.cancelScheduledValues(now);
-master.gain.setValueAtTime(master.gain.value,now);
-master.gain.linearRampToValueAtTime(TARGET_VOLUME,now+1.8);
 playing=true;
 btn.classList.add('playing');
 btn.setAttribute('aria-pressed','true');
+function _ramp(){
+var now=ctx.currentTime;
+master.gain.cancelScheduledValues(now);
+master.gain.setValueAtTime(master.gain.value,now);
+master.gain.linearRampToValueAtTime(TARGET_VOLUME,now+1.8);
+}
+if(ctx.state==='running'){_ramp();}
+else{
+ctx.resume();
+ctx.addEventListener('statechange',function _sc(){
+if(ctx.state==='running'){ctx.removeEventListener('statechange',_sc);_ramp();}
+});
+}
 }
 function stop(){
 if(!ctx)return;
@@ -1183,10 +1191,11 @@ master.gain.cancelScheduledValues(now);
 master.gain.linearRampToValueAtTime(TARGET_VOLUME,now+0.6);
 }
 });
-/* Start immediately; retry on first user interaction if browser blocked autoplay */
+/* Start immediately; statechange listener fires ramp when context unblocks */
 play();
-document.addEventListener('click',function _ua(){if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});document.removeEventListener('click',_ua);},{once:true});
-document.addEventListener('touchstart',function _ut(){if(ctx&&ctx.state==='suspended')ctx.resume().catch(()=>{});document.removeEventListener('touchstart',_ut);},{once:true});
+['click','scroll','keydown','touchstart'].forEach(function(ev){
+document.addEventListener(ev,function(){if(ctx&&ctx.state==='suspended')ctx.resume();},{once:true,passive:true});
+});
 })();
 (function(){
 const pb=document.getElementById('progress-bar');
@@ -1626,7 +1635,8 @@ if(statEl)statObserver.observe(statEl.closest('section'));
   var ctx2=sc.getContext('2d');
   sc.width=window.innerWidth; sc.height=window.innerHeight;
 
-  /* SOUND — full sneeze synthesis */
+  /* SOUND — time-aware sneeze synthesis */
+  var sneezeT0=Date.now(); /* wall-clock start, used to offset audio when unblocked late */
   function sound(){
     try{
       var AC=window.AudioContext||window.webkitAudioContext;
@@ -1634,134 +1644,133 @@ if(statEl)statObserver.observe(statEl.closest('section'));
       var ac=new AC();
       var sr=ac.sampleRate;
 
-      /* helper: white-noise buffer of `sec` seconds */
       function noise(sec){
+        sec=Math.max(0.05,sec);
         var b=ac.createBuffer(1,Math.floor(sr*sec),sr),d=b.getChannelData(0);
         for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;
         return b;
       }
 
       function schedule(){
+        var el=(Date.now()-sneezeT0)/1000; /* elapsed wall-clock seconds */
+        if(el>4.2)return;                  /* visual already done — skip */
         var t=ac.currentTime;
+        /* at(s): convert sequence-time s → ac-time, accounting for elapsed */
+        function at(s){return t+Math.max(0,s-el);}
 
-        /* ── PHASE 1: TREMBLING INHALE (0 – 1.75s) ── */
+        /* ── INHALE (seq 0–1.75s) ── */
+        if(el<1.75){
+          var osc=ac.createOscillator(),lfo=ac.createOscillator(),
+              lfoG=ac.createGain(),oscG=ac.createGain();
+          osc.type='sawtooth';
+          osc.frequency.setValueAtTime(70+(470*(el/1.75)),t);
+          osc.frequency.linearRampToValueAtTime(540,at(1.75));
+          lfo.type='sine';
+          lfo.frequency.setValueAtTime(6+(10*(el/1.75)),t);
+          lfo.frequency.linearRampToValueAtTime(16,at(1.6));
+          lfoG.gain.value=55;
+          lfo.connect(lfoG);lfoG.connect(osc.frequency);
+          oscG.gain.setValueAtTime(el<0.4?0.16*(el/0.4):0.16,t);
+          oscG.gain.linearRampToValueAtTime(0,at(1.77));
+          osc.connect(oscG);oscG.connect(ac.destination);
+          lfo.start(t);lfo.stop(at(1.8));osc.start(t);osc.stop(at(1.8));
 
-        /* Trembling oscillator – pitch rises + LFO quiver */
-        var osc=ac.createOscillator(),lfo=ac.createOscillator(),
-            lfoG=ac.createGain(),oscG=ac.createGain();
-        osc.type='sawtooth';
-        osc.frequency.setValueAtTime(70,t);
-        osc.frequency.linearRampToValueAtTime(190,t+0.9);
-        osc.frequency.linearRampToValueAtTime(400,t+1.55);
-        osc.frequency.linearRampToValueAtTime(540,t+1.75);
-        lfo.type='sine';
-        lfo.frequency.setValueAtTime(6,t);
-        lfo.frequency.linearRampToValueAtTime(16,t+1.6);
-        lfoG.gain.value=55;
-        lfo.connect(lfoG);lfoG.connect(osc.frequency);
-        oscG.gain.setValueAtTime(0,t);
-        oscG.gain.linearRampToValueAtTime(0.16,t+0.4);
-        oscG.gain.setValueAtTime(0.16,t+1.5);
-        oscG.gain.linearRampToValueAtTime(0,t+1.77);
-        osc.connect(oscG);oscG.connect(ac.destination);
-        lfo.start(t);lfo.stop(t+1.8);
-        osc.start(t);osc.stop(t+1.8);
+          var nS=ac.createBufferSource();nS.buffer=noise(1.8-el+0.1);
+          var nF=ac.createBiquadFilter(),nG=ac.createGain();
+          nF.type='bandpass';nF.Q.value=2.5;
+          nF.frequency.setValueAtTime(Math.min(4200,1400+(2800*(el/1.73))),t);
+          nF.frequency.linearRampToValueAtTime(4200,at(1.73));
+          nG.gain.setValueAtTime(el<0.5?0.09*(el/0.5):0.09,t);
+          nG.gain.linearRampToValueAtTime(0,at(1.77));
+          nS.connect(nF);nF.connect(nG);nG.connect(ac.destination);
+          nS.start(t);nS.stop(at(1.8));
+        }
 
-        /* Nasal passage noise – bandpass sweeps up */
-        var nS=ac.createBufferSource();nS.buffer=noise(1.8);
-        var nF=ac.createBiquadFilter(),nG=ac.createGain();
-        nF.type='bandpass';nF.Q.value=2.5;
-        nF.frequency.setValueAtTime(1400,t);
-        nF.frequency.linearRampToValueAtTime(4200,t+1.73);
-        nG.gain.setValueAtTime(0,t);
-        nG.gain.linearRampToValueAtTime(0.09,t+0.5);
-        nG.gain.linearRampToValueAtTime(0,t+1.77);
-        nS.connect(nF);nF.connect(nG);nG.connect(ac.destination);
-        nS.start(t);nS.stop(t+1.8);
+        /* ── CRACK (seq 1.78s) ── */
+        if(el<1.93){
+          var ckS=ac.createBufferSource();ckS.buffer=noise(0.15);
+          var ckG=ac.createGain();
+          ckG.gain.setValueAtTime(0,at(1.78));
+          ckG.gain.linearRampToValueAtTime(3.2,at(1.793));
+          ckG.gain.exponentialRampToValueAtTime(0.001,at(1.91));
+          ckS.connect(ckG);ckG.connect(ac.destination);
+          ckS.start(at(1.78));ckS.stop(at(1.95));
+        }
 
-        /* ── PHASE 2: SNEEZE EXPLOSION (1.78s) ── */
+        /* ── CHOO body (seq 1.78–2.7s) ── */
+        if(el<2.7){
+          var chS=ac.createBufferSource();chS.buffer=noise(Math.max(0.2,2.8-Math.max(el,1.78))+0.1);
+          var chF=ac.createBiquadFilter(),chG=ac.createGain();
+          chF.type='bandpass';
+          chF.frequency.setValueAtTime(4500,at(1.78));
+          chF.frequency.exponentialRampToValueAtTime(620,at(2.4));
+          chF.Q.setValueAtTime(1.0,at(1.78));chF.Q.linearRampToValueAtTime(6,at(2.4));
+          chG.gain.setValueAtTime(0,at(1.78));
+          chG.gain.linearRampToValueAtTime(2.4,at(1.795));
+          chG.gain.exponentialRampToValueAtTime(0.001,at(2.7));
+          chS.connect(chF);chF.connect(chG);chG.connect(ac.destination);
+          chS.start(at(1.78));chS.stop(at(2.8));
+        }
 
-        /* Initial CRACK — instant broadband burst */
-        var ckS=ac.createBufferSource();ckS.buffer=noise(0.12);
-        var ckG=ac.createGain();
-        ckG.gain.setValueAtTime(0,t+1.78);
-        ckG.gain.linearRampToValueAtTime(3.2,t+1.793);
-        ckG.gain.exponentialRampToValueAtTime(0.001,t+1.91);
-        ckS.connect(ckG);ckG.connect(ac.destination);
-        ckS.start(t+1.78);ckS.stop(t+1.93);
+        /* ── LOW BOOM (seq 1.78–2.35s) ── */
+        if(el<2.35){
+          var bm=ac.createOscillator(),bmG=ac.createGain();
+          bm.type='sine';
+          bm.frequency.setValueAtTime(120,at(1.78));
+          bm.frequency.exponentialRampToValueAtTime(20,at(2.25));
+          bmG.gain.setValueAtTime(0,at(1.78));
+          bmG.gain.linearRampToValueAtTime(1.6,at(1.795));
+          bmG.gain.exponentialRampToValueAtTime(0.001,at(2.35));
+          bm.connect(bmG);bmG.connect(ac.destination);
+          bm.start(at(1.78));bm.stop(at(2.45));
+        }
 
-        /* Main "CHOO" body — bandpass sweeps 4500 Hz → 600 Hz */
-        var chS=ac.createBufferSource();chS.buffer=noise(1.0);
-        var chF=ac.createBiquadFilter(),chG=ac.createGain();
-        chF.type='bandpass';
-        chF.frequency.setValueAtTime(4500,t+1.78);
-        chF.frequency.exponentialRampToValueAtTime(620,t+2.4);
-        chF.Q.setValueAtTime(1.0,t+1.78);
-        chF.Q.linearRampToValueAtTime(6,t+2.4);
-        chG.gain.setValueAtTime(0,t+1.78);
-        chG.gain.linearRampToValueAtTime(2.4,t+1.795);
-        chG.gain.exponentialRampToValueAtTime(0.001,t+2.7);
-        chS.connect(chF);chF.connect(chG);chG.connect(ac.destination);
-        chS.start(t+1.78);chS.stop(t+2.8);
+        /* ── MID RESONANCE (seq 1.78–2.2s) ── */
+        if(el<2.2){
+          var res=ac.createOscillator(),resG=ac.createGain();
+          res.type='triangle';
+          res.frequency.setValueAtTime(320,at(1.78));
+          res.frequency.exponentialRampToValueAtTime(75,at(2.1));
+          resG.gain.setValueAtTime(0,at(1.78));
+          resG.gain.linearRampToValueAtTime(0.55,at(1.793));
+          resG.gain.exponentialRampToValueAtTime(0.001,at(2.2));
+          res.connect(resG);resG.connect(ac.destination);
+          res.start(at(1.78));res.stop(at(2.3));
+        }
 
-        /* Low chest BOOM — sine drops from 120 Hz → 20 Hz */
-        var bm=ac.createOscillator(),bmG=ac.createGain();
-        bm.type='sine';
-        bm.frequency.setValueAtTime(120,t+1.78);
-        bm.frequency.exponentialRampToValueAtTime(20,t+2.25);
-        bmG.gain.setValueAtTime(0,t+1.78);
-        bmG.gain.linearRampToValueAtTime(1.6,t+1.795);
-        bmG.gain.exponentialRampToValueAtTime(0.001,t+2.35);
-        bm.connect(bmG);bmG.connect(ac.destination);
-        bm.start(t+1.78);bm.stop(t+2.45);
+        /* ── SPRAY TAIL (seq 1.79–2.95s) ── */
+        if(el<2.95){
+          var spS=ac.createBufferSource();spS.buffer=noise(Math.max(0.2,3.0-Math.max(el,1.79))+0.1);
+          var spF=ac.createBiquadFilter(),spG=ac.createGain();
+          spF.type='highpass';spF.frequency.value=5500;
+          spG.gain.setValueAtTime(0,at(1.79));
+          spG.gain.linearRampToValueAtTime(0.28,at(1.82));
+          spG.gain.exponentialRampToValueAtTime(0.001,at(2.95));
+          spS.connect(spF);spF.connect(spG);spG.connect(ac.destination);
+          spS.start(at(1.79));spS.stop(at(3.0));
+        }
 
-        /* Mid chest resonance — triangle, 320 Hz → 75 Hz */
-        var res=ac.createOscillator(),resG=ac.createGain();
-        res.type='triangle';
-        res.frequency.setValueAtTime(320,t+1.78);
-        res.frequency.exponentialRampToValueAtTime(75,t+2.1);
-        resG.gain.setValueAtTime(0,t+1.78);
-        resG.gain.linearRampToValueAtTime(0.55,t+1.793);
-        resG.gain.exponentialRampToValueAtTime(0.001,t+2.2);
-        res.connect(resG);resG.connect(ac.destination);
-        res.start(t+1.78);res.stop(t+2.3);
-
-        /* Spray — high-pass noise tail (the mist) */
-        var spS=ac.createBufferSource();spS.buffer=noise(1.2);
-        var spF=ac.createBiquadFilter(),spG=ac.createGain();
-        spF.type='highpass';spF.frequency.value=5500;
-        spG.gain.setValueAtTime(0,t+1.79);
-        spG.gain.linearRampToValueAtTime(0.28,t+1.82);
-        spG.gain.exponentialRampToValueAtTime(0.001,t+2.95);
-        spS.connect(spF);spF.connect(spG);spG.connect(ac.destination);
-        spS.start(t+1.79);spS.stop(t+3.0);
-
-        /* ── PHASE 3: REVERB ECHO TAIL (2.1s onward) ── */
-        var ecS=ac.createBufferSource();ecS.buffer=noise(0.8);
-        var ecF=ac.createBiquadFilter(),ecG=ac.createGain();
-        ecF.type='bandpass';ecF.frequency.value=900;ecF.Q.value=0.7;
-        ecG.gain.setValueAtTime(0,t+2.05);
-        ecG.gain.linearRampToValueAtTime(0.16,t+2.08);
-        ecG.gain.exponentialRampToValueAtTime(0.001,t+3.2);
-        ecS.connect(ecF);ecF.connect(ecG);ecG.connect(ac.destination);
-        ecS.start(t+2.05);ecS.stop(t+3.3);
+        /* ── ECHO TAIL (seq 2.05–3.2s) ── */
+        if(el<3.2){
+          var ecS=ac.createBufferSource();ecS.buffer=noise(Math.max(0.2,3.3-Math.max(el,2.05))+0.1);
+          var ecF=ac.createBiquadFilter(),ecG=ac.createGain();
+          ecF.type='bandpass';ecF.frequency.value=900;ecF.Q.value=0.7;
+          ecG.gain.setValueAtTime(0,at(2.05));
+          ecG.gain.linearRampToValueAtTime(0.16,at(2.08));
+          ecG.gain.exponentialRampToValueAtTime(0.001,at(3.2));
+          ecS.connect(ecF);ecF.connect(ecG);ecG.connect(ac.destination);
+          ecS.start(at(2.05));ecS.stop(at(3.3));
+        }
       }
 
-      /* Handle browser autoplay policy */
+      /* Use statechange — fires exactly when browser unblocks audio */
       if(ac.state==='running'){
         schedule();
       } else {
-        ac.resume().then(function(){ if(ac.state==='running') schedule(); }).catch(function(){});
-        /* Fallback: unlock on first user gesture */
-        var once=function(){
-          ac.resume().then(function(){ if(ac.state==='running') schedule(); }).catch(function(){});
-          document.removeEventListener('click',once);
-          document.removeEventListener('keydown',once);
-          document.removeEventListener('touchstart',once);
-        };
-        document.addEventListener('click',once,{once:true});
-        document.addEventListener('keydown',once,{once:true});
-        document.addEventListener('touchstart',once,{once:true});
+        ac.resume();
+        ac.addEventListener('statechange',function _sc(){
+          if(ac.state==='running'){ac.removeEventListener('statechange',_sc);schedule();}
+        });
       }
     }catch(e){}
   }
