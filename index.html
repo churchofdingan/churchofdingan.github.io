@@ -1183,6 +1183,8 @@ master.gain.cancelScheduledValues(now);
 master.gain.linearRampToValueAtTime(TARGET_VOLUME,now+0.6);
 }
 });
+/* Auto-start ambient drone once sneeze intro has cleared */
+setTimeout(()=>{ if(!playing) play(); },5200);
 })();
 (function(){
 const pb=document.getElementById('progress-bar');
