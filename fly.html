@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#050E0E"/>
+<title>Dingan Flies — The Church of Dingan</title>
+<meta name="description" content="The rat in the cape flies not because the cape grants flight but because the rat decided to fly. An official game of the Church of Dingan."/>
+<meta property="og:title" content="Dingan Flies"/>
+<meta property="og:description" content="Hold to decide to fly. Collect the sacred cheese. Dingan is watching with mild curiosity."/>
+<meta property="og:type" content="website"/>
+<link rel="manifest" href="fly.webmanifest"/>
+<link rel="icon" type="image/png" sizes="192x192" href="fly-192.png"/>
+<link rel="apple-touch-icon" href="fly-192.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Dingan Flies"/>
+<style>
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/cinzel-decorative@5.0.18/index.css');
+@import url('https://cdn.jsdelivr.net/npm/@fontsource/eb-garamond@5.0.26/index.css');
+:root{
+  --bg-deep:#050E0E;--bg-dark:#091616;--bg-mid:#0D2020;
+  --gold:#C8963E;--gold-light:#E8C878;--gold-bright:#FFD060;
+  --crimson:#5A1010;--crimson-b:#A01010;--parchment:#F2E0B8;
+  --text-dim:#8A7040;--border:rgba(200,150,62,0.3);
+  --display:'Cinzel Decorative',Palatino,serif;
+  --serif:'EB Garamond',Georgia,serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--bg-deep);touch-action:none;
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;display:block}
+
+/* ── HUD ── */
+#hud{position:fixed;top:max(10px,env(safe-area-inset-top));left:0;right:0;z-index:5;
+  display:flex;justify-content:space-between;align-items:flex-start;padding:0 14px;pointer-events:none}
+.hud-box{font-family:var(--display);color:var(--gold-light);text-shadow:0 0 14px rgba(200,150,62,0.35)}
+#squeaks{font-size:clamp(20px,5.5vw,34px)}
+#squeaks small{display:block;font-size:9px;letter-spacing:4px;color:var(--text-dim)}
+#cheese{font-size:clamp(16px,4.5vw,26px);text-align:right}
+#cheese small{display:block;font-size:9px;letter-spacing:4px;color:var(--text-dim)}
+#mute{position:fixed;bottom:max(12px,env(safe-area-inset-bottom));right:12px;z-index:8;width:40px;height:40px;
+  background:rgba(5,14,14,0.6);border:1px solid var(--border);color:var(--gold);font-size:16px;
+  border-radius:50%;cursor:pointer;font-family:var(--serif)}
+#mute.off{color:var(--text-dim);text-decoration:line-through}
+
+/* ── verse toast ── */
+#toast{position:fixed;top:max(64px,calc(env(safe-area-inset-top) + 54px));left:50%;transform:translateX(-50%);
+  z-index:6;width:min(560px,88vw);text-align:center;pointer-events:none;opacity:0;transition:opacity 1.2s ease}
+#toast.show{opacity:1}
+#toast p{font-family:var(--serif);font-style:italic;font-size:clamp(14px,3.6vw,19px);color:var(--parchment);
+  line-height:1.5;text-shadow:0 2px 14px rgba(0,0,0,0.8)}
+#toast cite{display:block;margin-top:6px;font-family:var(--display);font-style:normal;font-size:9px;
+  letter-spacing:3px;color:var(--text-dim);text-transform:uppercase}
+
+/* ── overlays ── */
+.veil{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:24px;background:radial-gradient(ellipse at 50% 42%,rgba(13,32,32,0.88),rgba(5,14,14,0.97) 75%)}
+.veil.hidden{display:none}
+.eyebrow{font-family:var(--display);font-size:10px;letter-spacing:6px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px}
+.title{font-family:var(--display);font-size:clamp(30px,9vw,64px);color:var(--gold-light);line-height:1.1;
+  text-shadow:0 0 40px rgba(200,150,62,0.35);margin-bottom:18px}
+.rule{width:120px;height:1px;margin:0 auto 18px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.quote{font-family:var(--serif);font-style:italic;font-size:clamp(15px,4vw,20px);color:var(--parchment);
+  max-width:30em;line-height:1.6;margin-bottom:8px}
+.quote-cite{font-family:var(--display);font-size:9px;letter-spacing:3px;color:var(--text-dim);text-transform:uppercase;margin-bottom:26px}
+.howto{font-family:var(--display);font-size:clamp(10px,2.8vw,13px);letter-spacing:4px;color:var(--gold);margin-bottom:34px}
+.gate{font-family:var(--display);font-size:11px;letter-spacing:6px;color:rgba(200,150,62,0.95);text-transform:uppercase;
+  text-shadow:0 0 20px rgba(200,150,62,0.5);animation:gatebeat 1.5s ease-in-out infinite;white-space:nowrap}
+@keyframes gatebeat{0%,100%{opacity:0.65}50%{opacity:1}}
+.site-link{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+  font-family:var(--display);font-size:9px;letter-spacing:4px;color:var(--text-dim);text-decoration:none;white-space:nowrap}
+.site-link:hover{color:var(--gold-light)}
+
+/* game over */
+#over-line{font-family:var(--serif);font-style:italic;font-size:clamp(15px,4vw,20px);color:var(--parchment);
+  max-width:26em;line-height:1.6;margin-bottom:26px}
+.score-big{font-family:var(--display);font-size:clamp(44px,13vw,84px);color:var(--gold-bright);line-height:1;
+  text-shadow:0 0 50px rgba(255,208,96,0.4)}
+.score-label{font-family:var(--display);font-size:10px;letter-spacing:5px;color:var(--text-dim);text-transform:uppercase;margin:6px 0 18px}
+.score-sub{font-family:var(--display);font-size:clamp(11px,3vw,14px);letter-spacing:3px;color:var(--gold);margin-bottom:4px}
+#new-rev{font-family:var(--display);font-size:11px;letter-spacing:4px;color:var(--gold-bright);margin-top:8px;
+  animation:gatebeat 1.2s ease-in-out infinite}
+.btns{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:30px}
+.btn{font-family:var(--display);font-size:11px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;
+  padding:14px 26px;text-decoration:none;transition:all 0.3s ease}
+.btn-solid{background:var(--gold);color:var(--bg-deep);border:1px solid var(--gold)}
+.btn-solid:hover{background:var(--gold-bright);border-color:var(--gold-bright)}
+.btn-ghost{background:none;color:var(--gold);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold-light)}
+#share-note{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--text-dim);margin-top:14px;min-height:1em}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud" aria-hidden="true">
+  <div class="hud-box" id="squeaks"><small>SQUEAKS</small>0</div>
+  <div class="hud-box" id="cheese"><small>CHEESE OFFERED</small>0</div>
+</div>
+<div id="toast"><p id="toast-text"></p><cite id="toast-cite"></cite></div>
+<button id="mute" aria-label="Toggle sound">♪</button>
+
+<!-- ── MENU ── -->
+<div class="veil" id="menu">
+  <p class="eyebrow">An Official Game of the Church of Dingan</p>
+  <h1 class="title">DINGAN<br/>FLIES</h1>
+  <div class="rule"></div>
+  <p class="quote">"The rat in the cape flies not because the cape grants flight but because the rat decided to fly. The cape is just what he chose to wear while doing it."</p>
+  <p class="quote-cite">— Proverbs of the Cape, XIII</p>
+  <p class="howto">HOLD — DECIDE TO FLY &nbsp;·&nbsp; RELEASE — RECONSIDER</p>
+  <p class="gate">◆ &nbsp; TAP ANYWHERE TO BEGIN &nbsp; ◆</p>
+  <a class="site-link" href="./" target="_self">◆ &nbsp; THE CHURCH OF DINGAN &nbsp; ◆</a>
+</div>
+
+<!-- ── GAME OVER ── -->
+<div class="veil hidden" id="over">
+  <p class="eyebrow">The Flight Has Ended</p>
+  <p id="over-line">—</p>
+  <p class="score-big" id="final-squeaks">0</p>
+  <p class="score-label">Squeaks</p>
+  <p class="score-sub" id="final-cheese">CHEESE OFFERED: 0</p>
+  <p class="score-sub" id="final-best">PERSONAL REVELATION: 0</p>
+  <p id="new-rev" style="display:none">◆ A NEW PERSONAL REVELATION ◆</p>
+  <div class="btns">
+    <button class="btn btn-solid" id="again">Squeak Again</button>
+    <button class="btn btn-ghost" id="share">Share the Miracle</button>
+    <a class="btn btn-ghost" href="./" id="read">Read the Dinganomicon</a>
+  </div>
+  <p id="share-note"></p>
+</div>
+
+<script>
+'use strict';
+/* ══════════════════════════════════════════════════════════════════
+   DINGAN FLIES — one-thumb endless flyer.
+   Everything is drawn in code. No assets, no libraries, no build.
+   Scripture quoted verbatim from the Dinganomicon (see index.html).
+   ══════════════════════════════════════════════════════════════════ */
+
+const cv = document.getElementById('c');
+const cx = cv.getContext('2d');
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+let W = 0, H = 0, S = 0; // css px; S = min(W,H) scale unit
+function resize() {
+  W = window.innerWidth; H = window.innerHeight; S = Math.min(W, H);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+resize();
+addEventListener('resize', resize);
+
+/* ── palette ── */
+const GOLD = '#C8963E', GOLD_L = '#E8C878', GOLD_B = '#FFD060';
+const INK = '#050E0E', INK2 = '#0A1A1A', CRIM = '#5A1010', CRIM_B = '#A01010';
+const PARCH = '#F2E0B8', DIM = '#8A7040';
+
+/* ── scripture (verbatim from the site) ── */
+const VERSES = [
+  ['"Dingan sneezed, and the universe exploded outward at incomprehensible speed."', 'Squeakesis 1:5–9'],
+  ['"The rat decided to fly. The cape is just what he chose to wear while doing it."', 'Proverbs of the Cape, XIII'],
+  ['"Dingan observes the Great Rat Race from his resting position. Dingan is not impressed."', 'Sacred Vocabulary'],
+  ['"Hope is what humans do when they do not have information."', 'The Ratvelations 1:9'],
+  ['"You are here. Dingan did not guide you here. Your curiosity did. That is more impressive."', 'Chronicle of Dinganism'],
+  ['"I am angry. Dingan says: yes. SQUEAK."', 'Psalm V — The Psalm of Anger'],
+];
+const DEATH_LINES = [
+  'Dingan looked upon your flight with mild curiosity.',
+  'Dingan has nothing to add.',
+  'The cape grants no protection. You already understood this.',
+  'Dingan observed your crash from his resting position.',
+  'The pattern of your flight is already visible to anyone willing to look at it directly.',
+];
+
+/* ── audio: tiny synth, created on first gesture ── */
+let AC = null, muted = localStorage.getItem('df-mute') === '1';
+const muteBtn = document.getElementById('mute');
+function reflectMute(){ muteBtn.classList.toggle('off', muted); }
+reflectMute();
+muteBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  muted = !muted; localStorage.setItem('df-mute', muted ? '1' : '0'); reflectMute();
+});
+function audio(){ if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } return AC; }
+function tone(freq0, freq1, dur, type, gain) {
+  const ac = audio(); if (!ac || muted) return;
+  const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+  o.type = type; o.frequency.setValueAtTime(freq0, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(freq1, 1), t + dur);
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(t); o.stop(t + dur);
+}
+const sfxSqueak = () => tone(1100, 1650, 0.09, 'sine', 0.12);
+const sfxFlap   = () => tone(170, 130, 0.05, 'sine', 0.05);
+const sfxDeath  = () => { tone(70, 38, 0.7, 'sawtooth', 0.10); tone(105, 57, 0.7, 'sawtooth', 0.06); };
+
+/* ── state ── */
+const ST = { MENU: 'menu', PLAY: 'play', DYING: 'dying', OVER: 'over', PAUSE: 'pause' };
+let state = ST.MENU;
+function setState(s){ state = s; document.body.dataset.gs = s; }
+setState(ST.MENU);
+
+let holding = false;
+let ratY, ratVY, dist, cheeseGot, speed, gateTimer, verseIdx, verseTimer, flapTimer;
+let gates = [];    // { x, gapY, gapH, passed }
+let cheeses = [];  // { x, y, r, t }
+let dust = [];     // background particles { x, y, r, vx, a }
+let burst = [];    // death particles
+let capeTrail = [];
+let dieDelay = 0;
+let best = parseInt(localStorage.getItem('df-best') || '0', 10);
+
+const RAT_X = () => W * 0.30;
+const R = () => S * 0.032;               // rat radius
+const HITBOX = 0.72;                     // forgiving
+
+function initDust(){
+  dust = [];
+  for (let i = 0; i < 42; i++) dust.push({
+    x: Math.random() * W, y: Math.random() * H,
+    r: 0.5 + Math.random() * 1.8, vx: 6 + Math.random() * 22, a: 0.08 + Math.random() * 0.3,
+  });
+}
+initDust();
+
+function reset(){
+  ratY = H * 0.45; ratVY = 0;
+  dist = 0; cheeseGot = 0;
+  speed = S * 0.52;
+  gates = []; cheeses = []; burst = []; capeTrail = [];
+  gateTimer = 1.0; verseIdx = 0; verseTimer = 0; flapTimer = 0; dieDelay = 0;
+  updateHUD();
+}
+
+/* ── HUD / toast ── */
+const elSq = document.getElementById('squeaks');
+const elCh = document.getElementById('cheese');
+const toast = document.getElementById('toast');
+let toastHide = 0;
+function updateHUD(){
+  elSq.innerHTML = '<small>SQUEAKS</small>' + Math.floor(dist);
+  elCh.innerHTML = '<small>CHEESE OFFERED</small>' + cheeseGot;
+}
+function showVerse(i){
+  const v = VERSES[i % VERSES.length];
+  document.getElementById('toast-text').textContent = v[0];
+  document.getElementById('toast-cite').textContent = '— ' + v[1];
+  toast.classList.add('show');
+  toastHide = 5.5;
+}
+
+/* ── input ── */
+function press(e){
+  if (e.target.closest('button, a')) return;
+  e.preventDefault();
+  audio(); if (AC && AC.state === 'suspended') AC.resume();
+  if (state === ST.MENU) { startGame(); holding = true; return; }
+  if (state === ST.PAUSE) { setState(ST.PLAY); holding = true; return; }
+  if (state === ST.PLAY) holding = true;
+}
+function release(){ holding = false; }
+addEventListener('pointerdown', press, { passive: false });
+addEventListener('pointerup', release);
+addEventListener('pointercancel', release);
+addEventListener('keydown', e => {
+  if (e.repeat) return;
+  if (e.code === 'Space' || e.code === 'ArrowUp') {
+    if (state === ST.MENU) startGame();
+    else if (state === ST.PAUSE) setState(ST.PLAY);
+    holding = true;
+  }
+});
+addEventListener('keyup', e => { if (e.code === 'Space' || e.code === 'ArrowUp') holding = false; });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && state === ST.PLAY) setState(ST.PAUSE);
+});
+
+function startGame(){
+  reset();
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('over').classList.add('hidden');
+  setState(ST.PLAY);
+}
+
+/* ── gates & cheese ── */
+function spawnGate(){
+  const t = Math.min(dist / 2600, 1);                       // difficulty ramp
+  const gapH = H * (0.42 - 0.12 * t);
+  const margin = H * 0.12;
+  const gapY = margin + Math.random() * (H - margin * 2 - gapH);
+  gates.push({ x: W + S * 0.1, gapY, gapH, passed: false });
+  if (Math.random() < 0.65) {
+    cheeses.push({ x: W + S * 0.1 + S * 0.08, y: gapY + gapH / 2, r: S * 0.024, t: Math.random() * 7 });
+  } else if (Math.random() < 0.5) {
+    cheeses.push({ x: W + S * 0.45, y: H * (0.2 + Math.random() * 0.6), r: S * 0.024, t: Math.random() * 7 });
+  }
+}
+
+function die(){
+  setState(ST.DYING);
+  holding = false;
+  sfxDeath();
+  dieDelay = 0.9;
+  for (let i = 0; i < 26; i++) {
+    const a = Math.random() * Math.PI * 2, v = S * (0.12 + Math.random() * 0.5);
+    burst.push({ x: RAT_X(), y: ratY, vx: Math.cos(a) * v, vy: Math.sin(a) * v - S * 0.1, life: 0.9, r: 1 + Math.random() * 3 });
+  }
+}
+
+function gameOver(){
+  setState(ST.OVER);
+  const score = Math.floor(dist);
+  const isNew = score > best;
+  if (isNew) { best = score; localStorage.setItem('df-best', String(best)); }
+  document.getElementById('over-line').textContent = DEATH_LINES[Math.floor(Math.random() * DEATH_LINES.length)];
+  document.getElementById('final-squeaks').textContent = score;
+  document.getElementById('final-cheese').textContent = 'CHEESE OFFERED: ' + cheeseGot;
+  document.getElementById('final-best').textContent = 'PERSONAL REVELATION: ' + best;
+  document.getElementById('new-rev').style.display = isNew ? 'block' : 'none';
+  document.getElementById('share-note').textContent = '';
+  document.body.dataset.score = score;
+  document.getElementById('over').classList.remove('hidden');
+}
+
+document.getElementById('again').addEventListener('click', e => { e.stopPropagation(); startGame(); });
+document.getElementById('share').addEventListener('click', async e => {
+  e.stopPropagation();
+  const score = Math.floor(dist);
+  const text = 'I flew ' + score + ' squeaks as Dingan, the rat god who admits he does not exist. '
+    + 'The cape granted no protection. ' + location.href;
+  const note = document.getElementById('share-note');
+  try {
+    if (navigator.share) { await navigator.share({ text }); return; }
+    await navigator.clipboard.writeText(text);
+    note.textContent = 'The miracle has been copied. Paste it where the Unsqueakables gather.';
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    note.textContent = 'Sharing failed. Dingan has nothing to add.';
+  }
+});
+
+/* ── update ── */
+function update(dt){
+  // background dust always drifts
+  for (const d of dust) {
+    d.x -= d.vx * dt * (state === ST.PLAY ? 1 + speed / (S * 2) : 0.4);
+    if (d.x < -4) { d.x = W + 4; d.y = Math.random() * H; }
+  }
+
+  if (state === ST.DYING) {
+    for (const p of burst) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += S * 1.2 * dt; p.life -= dt; }
+    burst = burst.filter(p => p.life > 0);
+    dieDelay -= dt;
+    if (dieDelay <= 0) gameOver();
+    return;
+  }
+  if (state !== ST.PLAY) return;
+
+  // physics — hold to rise
+  const G = H * 2.3, LIFT = H * 5.1, VMAX = H * 1.05;
+  ratVY += (holding ? G - LIFT : G) * dt;
+  ratVY = Math.max(-VMAX, Math.min(VMAX, ratVY));
+  ratY += ratVY * dt;
+  if (holding) { flapTimer -= dt; if (flapTimer <= 0) { sfxFlap(); flapTimer = 0.18; } }
+
+  // ceiling clamps, floor kills
+  const r = R();
+  if (ratY < r * 1.4) { ratY = r * 1.4; ratVY = Math.max(0, ratVY); }
+  if (ratY > H - r * 0.8) { ratY = H - r * 0.8; die(); return; }
+
+  // cape trail
+  capeTrail.unshift({ x: RAT_X(), y: ratY });
+  if (capeTrail.length > 22) capeTrail.pop();
+  for (let i = 0; i < capeTrail.length; i++) capeTrail[i].x -= speed * dt * 0.75;
+
+  // world scroll
+  speed = Math.min(S * 1.02, speed + S * 0.0075 * dt);
+  dist += speed * dt / (S * 0.028);
+  updateHUD();
+
+  // verse milestones
+  if (dist >= 250 + verseIdx * 400) { showVerse(verseIdx); verseIdx++; }
+  if (toastHide > 0) { toastHide -= dt; if (toastHide <= 0) toast.classList.remove('show'); }
+
+  // gates
+  gateTimer -= dt;
+  const interval = Math.max(1.15, 1.8 - dist / 4000);
+  if (gateTimer <= 0) { spawnGate(); gateTimer = interval; }
+  const gw = S * 0.15;
+  for (const g of gates) {
+    g.x -= speed * dt;
+    if (!g.passed && g.x + gw < RAT_X()) g.passed = true;
+  }
+  gates = gates.filter(g => g.x > -gw - 10);
+
+  // cheese
+  for (const ch of cheeses) { ch.x -= speed * dt; ch.t += dt; }
+  cheeses = cheeses.filter(ch => {
+    if (ch.x < -30) return false;
+    const dx = ch.x - RAT_X(), dy = ch.y + Math.sin(ch.t * 2.4) * S * 0.012 - ratY;
+    if (dx * dx + dy * dy < Math.pow(r * HITBOX + ch.r, 2)) {
+      cheeseGot++; sfxSqueak(); updateHUD();
+      for (let i = 0; i < 8; i++) {
+        const a = Math.random() * Math.PI * 2, v = S * (0.06 + Math.random() * 0.2);
+        burst.push({ x: ch.x, y: ch.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.5, r: 1 + Math.random() * 2 });
+      }
+      return false;
+    }
+    return true;
+  });
+  for (const p of burst) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+  burst = burst.filter(p => p.life > 0);
+
+  // collision with gates (circle vs rects)
+  const hb = r * HITBOX, rx = RAT_X();
+  for (const g of gates) {
+    if (rx + hb < g.x || rx - hb > g.x + gw) continue;
+    if (ratY - hb < g.gapY || ratY + hb > g.gapY + g.gapH) { die(); return; }
+  }
+}
+
+/* ── draw ── */
+function roundRect(x, y, w, h, rad){
+  cx.beginPath();
+  cx.moveTo(x + rad, y); cx.arcTo(x + w, y, x + w, y + h, rad); cx.arcTo(x + w, y + h, x, y + h, rad);
+  cx.arcTo(x, y + h, x, y, rad); cx.arcTo(x, y, x + w, y, rad); cx.closePath();
+}
+
+function drawBackground(){
+  const grad = cx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, INK); grad.addColorStop(0.6, '#081414'); grad.addColorStop(1, '#0D2020');
+  cx.fillStyle = grad; cx.fillRect(0, 0, W, H);
+  cx.fillStyle = GOLD;
+  for (const d of dust) { cx.globalAlpha = d.a; cx.fillRect(d.x, d.y, d.r, d.r); }
+  cx.globalAlpha = 1;
+}
+
+function drawGate(g){
+  const gw = S * 0.15, capH = S * 0.045;
+  cx.fillStyle = INK2; cx.strokeStyle = GOLD; cx.lineWidth = 2;
+  // top pillar
+  cx.fillRect(g.x, 0, gw, g.gapY); cx.strokeRect(g.x + 1, -4, gw - 2, g.gapY + 3);
+  cx.strokeStyle = 'rgba(200,150,62,0.25)'; cx.strokeRect(g.x + 7, -4, gw - 14, g.gapY - 4);
+  // top capital
+  cx.fillStyle = '#0F2424'; cx.strokeStyle = GOLD_L; cx.lineWidth = 2;
+  roundRect(g.x - S * 0.014, g.gapY - capH, gw + S * 0.028, capH, 3); cx.fill(); cx.stroke();
+  // bottom pillar
+  const by = g.gapY + g.gapH;
+  cx.fillStyle = INK2; cx.strokeStyle = GOLD; cx.lineWidth = 2;
+  cx.fillRect(g.x, by, gw, H - by); cx.strokeRect(g.x + 1, by + 1, gw - 2, H - by + 4);
+  cx.strokeStyle = 'rgba(200,150,62,0.25)'; cx.strokeRect(g.x + 7, by + 4, gw - 14, H - by);
+  // bottom capital
+  cx.fillStyle = '#0F2424'; cx.strokeStyle = GOLD_L; cx.lineWidth = 2;
+  roundRect(g.x - S * 0.014, by, gw + S * 0.028, capH, 3); cx.fill(); cx.stroke();
+  // diamond ornaments
+  cx.fillStyle = GOLD_B;
+  const mx = g.x + gw / 2, ds = S * 0.008;
+  for (const oy of [g.gapY - capH / 2, by + capH / 2]) {
+    cx.save(); cx.translate(mx, oy); cx.rotate(Math.PI / 4); cx.fillRect(-ds, -ds, ds * 2, ds * 2); cx.restore();
+  }
+}
+
+function drawCheese(ch){
+  const y = ch.y + Math.sin(ch.t * 2.4) * S * 0.012, r = ch.r;
+  cx.save(); cx.translate(ch.x, y); cx.rotate(Math.sin(ch.t * 1.3) * 0.15);
+  cx.shadowColor = 'rgba(255,208,96,0.8)'; cx.shadowBlur = 14;
+  cx.fillStyle = GOLD_B;
+  cx.beginPath(); cx.moveTo(-r, r * 0.75); cx.lineTo(r, r * 0.75); cx.lineTo(r * 0.8, -r * 0.15);
+  cx.quadraticCurveTo(0, -r * 1.05, -r * 0.8, -r * 0.15); cx.closePath(); cx.fill();
+  cx.shadowBlur = 0;
+  cx.strokeStyle = GOLD; cx.lineWidth = 1.5; cx.stroke();
+  cx.fillStyle = 'rgba(160,110,30,0.75)';
+  cx.beginPath(); cx.arc(-r * 0.3, r * 0.25, r * 0.16, 0, 7); cx.fill();
+  cx.beginPath(); cx.arc(r * 0.3, r * 0.1, r * 0.12, 0, 7); cx.fill();
+  cx.beginPath(); cx.arc(0, -r * 0.35, r * 0.10, 0, 7); cx.fill();
+  cx.restore();
+}
+
+function drawRat(){
+  const x = RAT_X(), y = ratY, r = R();
+  const tilt = Math.max(-0.45, Math.min(0.5, ratVY / (H * 1.4)));
+
+  // cape — ribbon through the trail points
+  if (capeTrail.length > 2) {
+    const wave = t => Math.sin(performance.now() / 130 + t * 2.2) * r * 0.22;
+    cx.beginPath();
+    cx.moveTo(x - r * 0.1, y - r * 0.75);
+    for (let i = 0; i < capeTrail.length; i++) {
+      const p = capeTrail[i], k = i / (capeTrail.length - 1);
+      cx.lineTo(p.x - r * 0.3, p.y - r * (0.75 - k * 0.25) + wave(k) - k * r * 0.3);
+    }
+    for (let i = capeTrail.length - 1; i >= 0; i--) {
+      const p = capeTrail[i], k = i / (capeTrail.length - 1);
+      cx.lineTo(p.x - r * 0.3, p.y + r * (0.75 - k * 0.1) + wave(k + 0.5) + k * r * 0.35);
+    }
+    cx.closePath();
+    const cgrad = cx.createLinearGradient(x, y, x - r * 8, y);
+    cgrad.addColorStop(0, CRIM_B); cgrad.addColorStop(0.4, CRIM); cgrad.addColorStop(1, 'rgba(90,16,16,0)');
+    cx.fillStyle = cgrad; cx.fill();
+    cx.strokeStyle = 'rgba(200,150,62,0.35)'; cx.lineWidth = 1; cx.stroke();
+  }
+
+  cx.save(); cx.translate(x, y); cx.rotate(tilt);
+
+  // tail
+  cx.strokeStyle = DIM; cx.lineWidth = r * 0.14; cx.lineCap = 'round';
+  cx.beginPath(); cx.moveTo(-r * 0.9, r * 0.25);
+  cx.quadraticCurveTo(-r * 1.8, r * 0.5 + Math.sin(performance.now() / 160) * r * 0.3, -r * 2.3, r * 0.05);
+  cx.stroke();
+
+  // body
+  cx.fillStyle = '#1A2828'; cx.strokeStyle = GOLD; cx.lineWidth = 2;
+  cx.beginPath(); cx.ellipse(0, 0, r, r * 0.78, 0, 0, 7); cx.fill(); cx.stroke();
+
+  // ear
+  cx.beginPath(); cx.arc(r * 0.28, -r * 0.72, r * 0.34, 0, 7);
+  cx.fillStyle = '#1A2828'; cx.fill(); cx.stroke();
+  cx.beginPath(); cx.arc(r * 0.30, -r * 0.70, r * 0.17, 0, 7);
+  cx.fillStyle = CRIM_B; cx.fill();
+
+  // snout + nose
+  cx.beginPath(); cx.moveTo(r * 0.55, -r * 0.30); cx.quadraticCurveTo(r * 1.45, -r * 0.05, r * 0.62, r * 0.30);
+  cx.quadraticCurveTo(r * 0.6, 0, r * 0.55, -r * 0.30); cx.closePath();
+  cx.fillStyle = '#1A2828'; cx.fill(); cx.stroke();
+  cx.fillStyle = GOLD_B; cx.beginPath(); cx.arc(r * 1.28, -r * 0.02, r * 0.10, 0, 7); cx.fill();
+
+  // eye
+  cx.fillStyle = GOLD_B; cx.beginPath(); cx.arc(r * 0.42, -r * 0.28, r * 0.11, 0, 7); cx.fill();
+
+  // whiskers
+  cx.strokeStyle = 'rgba(232,200,120,0.55)'; cx.lineWidth = 1;
+  for (const wy of [-0.05, 0.1, 0.25]) {
+    cx.beginPath(); cx.moveTo(r * 0.95, r * wy);
+    cx.lineTo(r * 1.75, r * (wy * 2.4 - 0.1)); cx.stroke();
+  }
+
+  // the gold star of Dingan on the flank
+  cx.fillStyle = GOLD_B;
+  cx.save(); cx.translate(-r * 0.25, -r * 0.05); cx.rotate(-0.2);
+  cx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + i * (Math.PI * 2 / 5);
+    const a2 = a + Math.PI / 5;
+    const R1 = r * 0.30, R2 = r * 0.13;
+    if (i === 0) cx.moveTo(Math.cos(a) * R1, Math.sin(a) * R1); else cx.lineTo(Math.cos(a) * R1, Math.sin(a) * R1);
+    cx.lineTo(Math.cos(a2) * R2, Math.sin(a2) * R2);
+  }
+  cx.closePath(); cx.fill(); cx.restore();
+
+  cx.restore();
+}
+
+function drawBurst(){
+  for (const p of burst) {
+    cx.globalAlpha = Math.max(0, p.life) * 1.1;
+    cx.fillStyle = GOLD_B;
+    cx.fillRect(p.x, p.y, p.r, p.r);
+  }
+  cx.globalAlpha = 1;
+}
+
+function drawPaused(){
+  cx.fillStyle = 'rgba(5,14,14,0.72)'; cx.fillRect(0, 0, W, H);
+  cx.fillStyle = GOLD_L; cx.textAlign = 'center';
+  cx.font = '600 ' + Math.round(S * 0.035) + 'px "Cinzel Decorative", Palatino, serif';
+  cx.fillText('DINGAN RESTS', W / 2, H / 2 - S * 0.02);
+  cx.font = 'italic ' + Math.round(S * 0.024) + 'px "EB Garamond", Georgia, serif';
+  cx.fillStyle = DIM;
+  cx.fillText('Tap to resume the flight', W / 2, H / 2 + S * 0.03);
+}
+
+/* ── main loop ── */
+/* ── PWA: install the service worker so the game works offline ── */
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  addEventListener('load', () => navigator.serviceWorker.register('./fly-sw.js').catch(() => {}));
+}
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  update(dt);
+  drawBackground();
+  for (const g of gates) drawGate(g);
+  for (const ch of cheeses) drawCheese(ch);
+  drawBurst();
+  if (state === ST.PLAY || state === ST.DYING || state === ST.PAUSE) drawRat();
+  if (state === ST.PAUSE) drawPaused();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
