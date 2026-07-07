@@ -108,6 +108,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg-deep);touch-action:non
 .ledger-list li .ln{color:var(--gold-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ledger-list li .ls{font-family:var(--display);font-size:12px;color:var(--gold);letter-spacing:1px;white-space:nowrap}
 .ledger-list li.me{background:rgba(200,150,62,0.10)}
+.menu-ledger{margin-top:16px;max-height:32vh;overflow-y:auto;width:min(22rem,88vw)}
+#menu{overflow-y:auto;padding-top:max(2.5rem,env(safe-area-inset-top));
+  padding-bottom:max(4.5rem,env(safe-area-inset-bottom))}
 </style>
 </head>
 <body>
@@ -129,6 +132,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg-deep);touch-action:non
   <p class="quote-cite">— Proverbs of the Cape, XIII</p>
   <p class="howto">HOLD — DECIDE TO FLY &nbsp;·&nbsp; RELEASE — RECONSIDER</p>
   <p class="gate">◆ &nbsp; TAP ANYWHERE TO BEGIN &nbsp; ◆</p>
+  <button class="btn btn-ghost" id="menu-ledger-btn" style="margin-top:26px">The Ledger of Ascension</button>
+  <ol class="ledger-list menu-ledger" id="menu-ledger-list" hidden></ol>
   <a class="site-link" href="./" target="_self">◆ &nbsp; THE CHURCH OF DINGAN &nbsp; ◆</a>
 </div>
 
@@ -283,7 +288,8 @@ function showVerse(i){
 
 /* ── input ── */
 function press(e){
-  if (e.target.closest('button, a, input')) return; // preventDefault would block input focus
+  // buttons/links/inputs handle themselves; scrolling the rank list must not start a flight
+  if (e.target.closest('button, a, input, .ledger-list')) return;
   e.preventDefault();
   audio(); if (AC && AC.state === 'suspended') AC.resume();
   if (state === ST.MENU) { startGame(); holding = true; return; }
@@ -628,29 +634,72 @@ function ordinal(n){
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+async function fetchTop(){
+  const res = await fetch(LEDGER_URL + '?action=top');
+  const data = await res.json();
+  if (!data.ok || !Array.isArray(data.top)) throw new Error('bad payload');
+  return data.top;
+}
+
+function ledgerLine(listEl, text){
+  listEl.textContent = '';
+  const li = document.createElement('li');
+  const n = document.createElement('span');
+  n.className = 'ln';
+  n.textContent = text;
+  li.appendChild(n);
+  listEl.appendChild(li);
+}
+
+function renderTop(listEl, top, highlight){
+  listEl.textContent = '';
+  top.forEach((row, i) => {
+    const li = document.createElement('li');
+    if (highlight && row.name === highlight) li.className = 'me';
+    const n = document.createElement('span');
+    n.className = 'ln';
+    n.textContent = (i + 1) + '. ' + row.name;
+    const s = document.createElement('span');
+    s.className = 'ls';
+    s.textContent = row.score + ' SQ';
+    li.appendChild(n); li.appendChild(s);
+    listEl.appendChild(li);
+  });
+}
+
+function savedName(){
+  try { return localStorage.getItem('df-name') || undefined; } catch (e) { return undefined; }
+}
+
 async function refreshLedger(highlight){
   try {
-    const res = await fetch(LEDGER_URL + '?action=top');
-    const data = await res.json();
-    if (!data.ok || !Array.isArray(data.top)) throw new Error('bad payload');
-    ledgerListEl.textContent = '';
-    if (data.top.length === 0) { ledgerNoteEl.textContent = 'The Ledger is empty. Ascend first.'; return; }
-    data.top.forEach((row, i) => {
-      const li = document.createElement('li');
-      if (highlight && row.name === highlight) li.className = 'me';
-      const n = document.createElement('span');
-      n.className = 'ln';
-      n.textContent = (i + 1) + '. ' + row.name;
-      const s = document.createElement('span');
-      s.className = 'ls';
-      s.textContent = row.score + ' SQ';
-      li.appendChild(n); li.appendChild(s);
-      ledgerListEl.appendChild(li);
-    });
+    const top = await fetchTop();
+    if (top.length === 0) { ledgerListEl.textContent = ''; ledgerNoteEl.textContent = 'The Ledger is empty. Ascend first.'; return; }
+    renderTop(ledgerListEl, top, highlight);
   } catch (err) {
-    ledgerNoteEl.textContent = 'The Ledger is silent.'; // offline, or backend not yet updated
+    ledgerNoteEl.textContent = 'The Ledger is silent.'; // offline, or backend unreachable
   }
 }
+
+/* menu rank list — same Ledger, reachable before anyone has to die for it */
+const menuLedgerBtn = document.getElementById('menu-ledger-btn');
+const menuLedgerList = document.getElementById('menu-ledger-list');
+menuLedgerBtn.addEventListener('click', async (e) => {
+  e.stopPropagation();
+  if (!menuLedgerList.hidden) { menuLedgerList.hidden = true; return; }
+  menuLedgerBtn.disabled = true;
+  menuLedgerBtn.textContent = 'Consulting the Ledger…';
+  menuLedgerList.hidden = false;
+  try {
+    const top = await fetchTop();
+    if (top.length === 0) ledgerLine(menuLedgerList, 'The Ledger is empty. Ascend first.');
+    else renderTop(menuLedgerList, top, savedName());
+  } catch (err) {
+    ledgerLine(menuLedgerList, 'The Ledger is silent.');
+  }
+  menuLedgerBtn.disabled = false;
+  menuLedgerBtn.textContent = 'The Ledger of Ascension';
+});
 
 async function inscribe(){
   if (inscribed) return;
