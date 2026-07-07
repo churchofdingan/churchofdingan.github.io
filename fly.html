@@ -90,6 +90,24 @@ html,body{height:100%;overflow:hidden;background:var(--bg-deep);touch-action:non
 .btn-ghost{background:none;color:var(--gold);border:1px solid var(--border)}
 .btn-ghost:hover{border-color:var(--gold);color:var(--gold-light)}
 #share-note{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--text-dim);margin-top:14px;min-height:1em}
+
+/* ── the Ledger of Ascension (global leaderboard) ── */
+#over{justify-content:flex-start;overflow-y:auto;padding-top:max(3rem,env(safe-area-inset-top));
+  padding-bottom:max(2rem,env(safe-area-inset-bottom))}
+.ledger{margin-top:28px;width:min(30rem,92vw);text-align:center}
+.ledger-title{font-family:var(--display);font-size:11px;letter-spacing:5px;color:var(--text-dim);margin-bottom:14px}
+.ledger-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+#ledger-name{background:rgba(5,14,14,0.6);border:1px solid var(--border);color:var(--gold-light);
+  font-family:var(--serif);font-style:italic;font-size:15px;text-align:center;padding:11px 12px;width:13rem}
+#ledger-name::placeholder{color:var(--text-dim)}
+#ledger-name:focus{outline:none;border-color:var(--gold)}
+.ledger-note{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--text-dim);min-height:1.2em;margin-bottom:10px}
+.ledger-list{list-style:none;margin:0 auto;padding:0;max-width:22rem;text-align:left}
+.ledger-list li{display:flex;justify-content:space-between;gap:12px;padding:7px 8px;
+  border-bottom:1px solid rgba(200,150,62,0.15);font-family:var(--serif);font-size:15px;color:var(--parchment)}
+.ledger-list li .ln{color:var(--gold-light);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ledger-list li .ls{font-family:var(--display);font-size:12px;color:var(--gold);letter-spacing:1px;white-space:nowrap}
+.ledger-list li.me{background:rgba(200,150,62,0.10)}
 </style>
 </head>
 <body>
@@ -129,6 +147,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg-deep);touch-action:non
     <a class="btn btn-ghost" href="./" id="read">Read the Dinganomicon</a>
   </div>
   <p id="share-note"></p>
+  <div class="ledger">
+    <p class="ledger-title">— THE LEDGER OF ASCENSION —</p>
+    <div class="ledger-row">
+      <input id="ledger-name" maxlength="24" placeholder="Name for the Ledger" aria-label="Name for the Ledger"/>
+      <button class="btn btn-ghost" id="ledger-submit">Inscribe</button>
+    </div>
+    <p class="ledger-note" id="ledger-note"></p>
+    <ol class="ledger-list" id="ledger-list"></ol>
+  </div>
 </div>
 
 <script>
@@ -256,7 +283,7 @@ function showVerse(i){
 
 /* ── input ── */
 function press(e){
-  if (e.target.closest('button, a')) return;
+  if (e.target.closest('button, a, input')) return; // preventDefault would block input focus
   e.preventDefault();
   audio(); if (AC && AC.state === 'suspended') AC.resume();
   if (state === ST.MENU) { startGame(); holding = true; return; }
@@ -325,6 +352,8 @@ function gameOver(){
   document.getElementById('share-note').textContent = '';
   document.body.dataset.score = score;
   document.getElementById('over').classList.remove('hidden');
+  resetLedgerUI();
+  refreshLedger();
 }
 
 document.getElementById('again').addEventListener('click', e => { e.stopPropagation(); startGame(); });
@@ -575,6 +604,87 @@ function drawPaused(){
 }
 
 /* ── main loop ── */
+/* ── the Ledger of Ascension — global leaderboard (Apps Script backend).
+      Reads are GET ?action=top; writes are text/plain POSTs (no CORS
+      preflight). All rendering via textContent — nothing from the network
+      touches innerHTML. Fails silent-and-solemn when offline. ── */
+const LEDGER_URL = 'https://script.google.com/macros/s/AKfycbxZ0YW9Nnbh2WwFu5Y75inZBnySSv2Qx-rSuAp6sVdb3n5dBCS1YvJ-N2_52CEPYa2Q/exec';
+const ledgerListEl = document.getElementById('ledger-list');
+const ledgerNoteEl = document.getElementById('ledger-note');
+const ledgerNameEl = document.getElementById('ledger-name');
+const ledgerBtn = document.getElementById('ledger-submit');
+let inscribed = false;
+
+function resetLedgerUI(){
+  inscribed = false;
+  ledgerBtn.disabled = false;
+  ledgerBtn.textContent = 'Inscribe';
+  ledgerNoteEl.textContent = '';
+  try { ledgerNameEl.value = localStorage.getItem('df-name') || ''; } catch (e) {}
+}
+
+function ordinal(n){
+  const s = ['th','st','nd','rd'], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+async function refreshLedger(highlight){
+  try {
+    const res = await fetch(LEDGER_URL + '?action=top');
+    const data = await res.json();
+    if (!data.ok || !Array.isArray(data.top)) throw new Error('bad payload');
+    ledgerListEl.textContent = '';
+    if (data.top.length === 0) { ledgerNoteEl.textContent = 'The Ledger is empty. Ascend first.'; return; }
+    data.top.forEach((row, i) => {
+      const li = document.createElement('li');
+      if (highlight && row.name === highlight) li.className = 'me';
+      const n = document.createElement('span');
+      n.className = 'ln';
+      n.textContent = (i + 1) + '. ' + row.name;
+      const s = document.createElement('span');
+      s.className = 'ls';
+      s.textContent = row.score + ' SQ';
+      li.appendChild(n); li.appendChild(s);
+      ledgerListEl.appendChild(li);
+    });
+  } catch (err) {
+    ledgerNoteEl.textContent = 'The Ledger is silent.'; // offline, or backend not yet updated
+  }
+}
+
+async function inscribe(){
+  if (inscribed) return;
+  const nm = ledgerNameEl.value.trim().slice(0, 24);
+  if (!nm) { ledgerNoteEl.textContent = 'The Ledger requires a name.'; return; }
+  ledgerBtn.disabled = true;
+  ledgerBtn.textContent = 'Inscribing…';
+  try { localStorage.setItem('df-name', nm); } catch (e) {}
+  try {
+    const res = await fetch(LEDGER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'score', name: nm, score: Math.floor(dist), cheese: cheeseGot, hp: '' })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error((data && data.error) || 'The Ledger declined.');
+    inscribed = true;
+    ledgerBtn.textContent = 'Inscribed';
+    ledgerNoteEl.textContent = data.rank
+      ? 'Inscribed. You stand ' + ordinal(data.rank) + ' among ' + data.of + ' recorded flights.'
+      : 'Inscribed in the Ledger.';
+    refreshLedger(nm);
+  } catch (err) {
+    ledgerBtn.disabled = false;
+    ledgerBtn.textContent = 'Inscribe';
+    // only surface messages written by the v2 backend; anything else
+    // (old backend still deployed, network failure) gets one solemn line
+    const m = err && err.message ? err.message : '';
+    ledgerNoteEl.textContent = /Ledger|Dingan/.test(m) ? m : 'The Ledger is not yet open.';
+  }
+}
+
+ledgerBtn.addEventListener('click', (e) => { e.stopPropagation(); inscribe(); });
+
 /* ── PWA: install the service worker so the game works offline ── */
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   addEventListener('load', () => navigator.serviceWorker.register('./fly-sw.js').catch(() => {}));

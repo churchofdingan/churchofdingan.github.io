@@ -1465,21 +1465,33 @@ const FORMSPREE_ENDPOINT='';  // e.g. 'https://formspree.io/f/xxxxxxxx'
 // To activate: deploy APPS_SCRIPT.js as a Google Apps Script Web App,
 // then paste your deployment URL here (looks like https://script.google.com/macros/s/.../exec)
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbxZ0YW9Nnbh2WwFu5Y75inZBnySSv2Qx-rSuAp6sVdb3n5dBCS1YvJ-N2_52CEPYa2Q/exec';
-async function sendDinganiteEmail(name,email,dinganiteId,isReturning){
+async function registerDinganite(name,email,localId,isReturning){
   if(!APPS_SCRIPT_URL)return {ok:false,reason:'not_configured'};
   try{
-    // Apps Script web apps require mode:'no-cors' from browsers.
-    // We send Content-Type:text/plain to avoid a CORS preflight (Apps Script
-    // would reject the OPTIONS request). The script still parses JSON body.
-    await fetch(APPS_SCRIPT_URL,{
+    // text/plain avoids the CORS preflight Apps Script cannot answer; the
+    // response (served after Google's redirect) carries
+    // Access-Control-Allow-Origin:*, so we can READ the server's verdict —
+    // including the REAL sequential Sacred ID assigned by the Registry.
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),9000);
+    const res=await fetch(APPS_SCRIPT_URL,{
       method:'POST',
-      mode:'no-cors',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body:JSON.stringify({name,email,dinganiteId,isReturning})
+      body:JSON.stringify({action:'join',name,email,hp:'',dinganiteId:localId,isReturning}),
+      signal:ctrl.signal
     });
-    // With no-cors we cannot read the response, so we optimistically return ok.
-    // Real verification happens in the Google Sheet (the script logs every call).
-    return {ok:true};
+    clearTimeout(timer);
+    const data=await res.json();
+    // v2 backend: {ok,id,isReturning,emailSent} · v1 legacy: {success,dinganiteId,emailSent}
+    if(data&&(data.ok||data.success)){
+      return {
+        ok:true,
+        id:(typeof data.id==='number'&&data.id>0)?data.id:null,
+        isReturning:(data.isReturning!==undefined)?!!data.isReturning:isReturning,
+        emailSent:data.emailSent!==false
+      };
+    }
+    return {ok:false,reason:(data&&data.error)||'rejected'};
   }catch(err){
     return {ok:false,reason:'send_failed',error:err};
   }
@@ -1560,12 +1572,26 @@ body:JSON.stringify({name:name,email:email,confirmId:confirmId,source:'churchofd
 });
 }catch(err){}
 }
+// Local number is the fallback; the Registry (Apps Script) is the truth.
 const result=getOrAssignDinganiteId(email);
-const dinganiteId=formatDinganiteId(result.idNum);
+let idNum=result.idNum,isReturning=result.isReturning;
+joinSubmit.textContent='Consulting the Registry...';
+const server=await registerDinganite(name,email,formatDinganiteId(idNum),isReturning);
+if(server.ok&&server.id){
+idNum=server.id;isReturning=server.isReturning;
+try{
+const key=email.toLowerCase().trim();
+const reg=JSON.parse(localStorage.getItem('dinganite_registry')||'{}');
+reg[key]=idNum;localStorage.setItem('dinganite_registry',JSON.stringify(reg));
+const c=parseInt(localStorage.getItem('dinganite_count')||'144',10);
+if(idNum>c)localStorage.setItem('dinganite_count',String(idNum));
+}catch(err){}
+}
+const dinganiteId=formatDinganiteId(idNum);
 document.getElementById('cert-name').textContent=name;
 document.getElementById('cert-id').textContent=dinganiteId;
 const welcome=document.getElementById('cert-welcome');
-welcome.textContent=result.isReturning
+welcome.textContent=isReturning
 ?'Welcome back, Dinganite. Your faith was already recorded.'
 :'Your faith has been recorded.';
 joinForm.style.display='none';
@@ -1574,23 +1600,18 @@ const certActions=document.getElementById('cert-actions');
 welcome.classList.add('visible');
 cert.classList.add('visible');
 setTimeout(()=>certActions.classList.add('visible'),200);
-// Send confirmation email in background
 const emailStatusEl=document.getElementById('cert-email-status');
 if(APPS_SCRIPT_URL){
-if(result.isReturning){
+if(server.ok&&isReturning){
 emailStatusEl.textContent='✦ Your sacred confirmation was already sent to '+email+' previously. Your Sacred ID is unchanged.';
-emailStatusEl.classList.add('visible');
-}else{
-emailStatusEl.textContent='Sending sacred confirmation to '+email+'...';
-emailStatusEl.classList.add('visible');
-sendDinganiteEmail(name,email,dinganiteId,result.isReturning).then(r=>{
-if(r.ok){
+}else if(server.ok&&server.emailSent){
 emailStatusEl.textContent='✦ Confirmation sent to '+email+'. Check your inbox (and spam folder).';
+}else if(server.ok){
+emailStatusEl.textContent='✦ Your Sacred ID is recorded in the Registry.';
 }else{
-emailStatusEl.textContent='Email could not be sent. Your Sacred ID is recorded locally.';
+emailStatusEl.textContent='The Registry could not be reached. Your Sacred ID is recorded locally.';
 }
-});
-}
+emailStatusEl.classList.add('visible');
 }
 });
 document.getElementById('cert-download').addEventListener('click',async function(){
