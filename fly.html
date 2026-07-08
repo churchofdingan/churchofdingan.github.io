@@ -359,7 +359,9 @@ function gameOver(){
   document.body.dataset.score = score;
   document.getElementById('over').classList.remove('hidden');
   resetLedgerUI();
-  refreshLedger();
+  // a soul the Ledger already knows is inscribed automatically, every flight
+  if (savedName()) inscribe();
+  else refreshLedger();
 }
 
 document.getElementById('again').addEventListener('click', e => { e.stopPropagation(); startGame(); });
@@ -719,20 +721,29 @@ async function inscribe(){
     inscribed = true;
     ledgerBtn.textContent = 'Inscribed';
     ledgerNoteEl.textContent = data.rank
-      ? 'Inscribed. You stand ' + ordinal(data.rank) + ' among ' + data.of + ' recorded flights.'
+      ? 'Inscribed. You stand ' + ordinal(data.rank) + ' among ' + data.of + ' ascended.'
       : 'Inscribed in the Ledger.';
     refreshLedger(nm);
   } catch (err) {
     ledgerBtn.disabled = false;
     ledgerBtn.textContent = 'Inscribe';
-    // only surface messages written by the v2 backend; anything else
-    // (old backend still deployed, network failure) gets one solemn line
+    // only surface messages written by the backend; anything else
+    // (network failure, unexpected reply) gets one solemn line
     const m = err && err.message ? err.message : '';
     ledgerNoteEl.textContent = /Ledger|Dingan/.test(m) ? m : 'The Ledger is not yet open.';
+    refreshLedger(savedName()); // still show the rank list under the note
   }
 }
 
 ledgerBtn.addEventListener('click', (e) => { e.stopPropagation(); inscribe(); });
+// editing the name re-arms the button, so a soul may inscribe under a new name
+ledgerNameEl.addEventListener('input', () => {
+  if (inscribed) {
+    inscribed = false;
+    ledgerBtn.disabled = false;
+    ledgerBtn.textContent = 'Inscribe';
+  }
+});
 
 /* ── PWA: install the service worker so the game works offline ── */
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

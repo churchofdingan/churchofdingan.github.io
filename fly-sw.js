@@ -1,6 +1,6 @@
 /* Dingan Flies — service worker. Cache-first for the game shell + fonts;
    everything else (index.html etc.) passes straight through untouched. */
-const CACHE = 'dingan-flies-v3';
+const CACHE = 'dingan-flies-v4';
 const SHELL = ['./fly.html', './fly.webmanifest', './fly-192.png', './fly-512.png'];
 
 self.addEventListener('install', (e) => {
