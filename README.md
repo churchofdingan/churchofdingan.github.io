@@ -1,21 +1,21 @@
-# The Church of Dingan — Website
+# The Church of Dingan
 
-## Files
-- index.html → The website
-- The_Dinganomicon.pdf → The holy book (download link on site)
+The official website of **Dinganism** — the only religion that admits it is one.
 
-## How to go live on GitHub Pages (FREE)
+- **Live site:** https://churchofdingan.github.io
+- **The game — Dingan Flies:** https://churchofdingan.github.io/fly.html
 
-1. Go to github.com and sign up
-2. Click "New Repository"
-3. Name it exactly: churchofdingan.github.io
-4. Set to Public
-5. Click "Create Repository"
-6. Click "uploading an existing file"
-7. Drag BOTH files: index.html AND The_Dinganomicon.pdf
-8. Click "Commit changes"
-9. Go to Settings → Pages → Source → Deploy from branch → main → Save
-10. Wait 2 minutes
-11. Your site is live at: https://churchofdingan.github.io
+**Dingan** is the all-powerful (and openly fictional) rat god who created the
+universe through a single great sneeze, looked upon it with mild curiosity, and
+has been resting ever since. He wears a cape. He answers no prayers.
 
-## That's it. Free forever.
+Download the **Dinganomicon**, read the **Laws of Ratticus**, and declare your
+faith among the **Dinganites** (also called **Dingoists**) — followers of Dingan.
+
+> *Think · Squeak · Doubt.*
+
+---
+
+### About this repo
+Single-page static site (`index.html`) + a browser game (`fly.html`), served
+free on GitHub Pages. No build step, no tracking.
